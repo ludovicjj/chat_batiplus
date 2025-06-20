@@ -1,0 +1,268 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cogs me-2"></i>
+                        Administration
+                    </h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="#status" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                        <i class="fas fa-heartbeat me-2"></i>Statut système
+                    </a>
+                    <a href="#logs" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                        <i class="fas fa-file-alt me-2"></i>Logs récents
+                    </a>
+                    <a href="#schema" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                        <i class="fas fa-database me-2"></i>Schéma BDD
+                    </a>
+                    <a href="#security" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                        <i class="fas fa-shield-alt me-2"></i>Sécurité
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <div class="col-md-9">
+            <h2>Dashboard ChatBot BatiPlus</h2>
+            
+            <div class="tab-content">
+                <!-- Status Tab -->
+                <div class="tab-pane fade show active" id="status">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Statut du système</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="system-status">
+                                <div class="text-center">
+                                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                                    <p>Vérification du statut...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logs Tab -->
+                <div class="tab-pane fade" id="logs">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between">
+                            <h5>Logs récents</h5>
+                            <button class="btn btn-sm btn-outline-primary" onclick="refreshLogs()">
+                                <i class="fas fa-sync-alt"></i> Actualiser
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="logs-content">
+                                <p class="text-muted">Les logs seraient affichés ici en production...</p>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Pour voir les logs en temps réel, utilisez :
+                                    <code>tail -f var/log/chatbot.log</code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Schema Tab -->
+                <div class="tab-pane fade" id="schema">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Schéma de la base de données</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="database-schema">
+                                <div class="text-center">
+                                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                                    <p>Chargement du schéma...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Tab -->
+                <div class="tab-pane fade" id="security">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Configuration de sécurité</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-table me-2"></i>Tables autorisées</h6>
+                                    <div id="allowed-tables" class="mb-3">
+                                        <div class="badge bg-secondary me-1">clients</div>
+                                        <div class="badge bg-secondary me-1">projets</div>
+                                        <div class="badge bg-secondary me-1">interventions</div>
+                                        <div class="badge bg-secondary me-1">factures</div>
+                                        <div class="badge bg-secondary me-1">devis</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-ban me-2"></i>Mots-clés bloqués</h6>
+                                    <div class="mb-3">
+                                        <small class="text-muted">
+                                            INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, 
+                                            REPLACE, MERGE, CALL, EXEC, EXECUTE, GRANT, REVOKE...
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                Système sécurisé : Accès en lecture seule, validation SQL stricte
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+class AdminDashboard {
+    constructor() {
+        this.init();
+    }
+    
+    init() {
+        this.loadSystemStatus();
+        
+        // Initialize tabs
+        const tabs = document.querySelectorAll('[data-bs-toggle="tab"]');
+        tabs.forEach(tab => {
+            tab.addEventListener('shown.bs.tab', (e) => {
+                const target = e.target.getAttribute('href');
+                if (target === '#schema') {
+                    this.loadDatabaseSchema();
+                }
+            });
+        });
+    }
+    
+    async loadSystemStatus() {
+        try {
+            const response = await fetch('/api/chatbot/status');
+            const data = await response.json();
+            
+            const statusDiv = document.getElementById('system-status');
+            
+            if (data.success) {
+                const status = data.status;
+                statusDiv.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card bg-${status.database === 'connected' ? 'success' : 'danger'} text-white">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-database fa-2x mb-2"></i>
+                                    <h5>Base de données</h5>
+                                    <p class="mb-0">${status.database === 'connected' ? 'Connectée' : 'Erreur'}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-table fa-2x mb-2"></i>
+                                    <h5>Tables</h5>
+                                    <p class="mb-0">${status.allowed_tables.length} autorisées</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-clock fa-2x mb-2"></i>
+                                    <h5>Dernière vérification</h5>
+                                    <p class="mb-0">${new Date(status.timestamp.date).toLocaleTimeString()}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <h6>Tables autorisées :</h6>
+                        <div>
+                            ${status.allowed_tables.map(table => 
+                                `<span class="badge bg-secondary me-1">${table}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                statusDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Erreur lors de la vérification du statut système
+                    </div>
+                `;
+            }
+        } catch (error) {
+            document.getElementById('system-status').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Impossible de contacter le système : ${error.message}
+                </div>
+            `;
+        }
+    }
+    
+    async loadDatabaseSchema() {
+        // Cette fonctionnalité nécessiterait un endpoint supplémentaire
+        // pour récupérer le schéma détaillé
+        const schemaDiv = document.getElementById('database-schema');
+        schemaDiv.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Pour voir le schéma détaillé, utilisez la commande :
+                <br><code>php bin/console chatbot:test --schema</code>
+            </div>
+            <p class="text-muted">
+                Le schéma complet serait affiché ici avec les colonnes, types, 
+                relations et index pour chaque table autorisée.
+            </p>
+        `;
+    }
+}
+
+function refreshLogs() {
+    // Cette fonctionnalité nécessiterait un endpoint pour récupérer les logs
+    const logsContent = document.getElementById('logs-content');
+    logsContent.innerHTML = `
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Actualisation des logs...</p>
+        </div>
+    `;
+    
+    setTimeout(() => {
+        logsContent.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Logs actualisés. En production, les dernières entrées seraient affichées ici.
+            </div>
+        `;
+    }, 1000);
+}
+
+// Initialize dashboard when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    new AdminDashboard();
+});
+</script>
+{% endblock %}
