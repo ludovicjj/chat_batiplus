@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Exception\UnsafeSqlException;
-use App\Service\DatabaseSchemaService;
 use App\Service\LlmService;
+use App\Service\Schema\DatabaseSchemaService;
 use App\Service\SqlSecurityService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;

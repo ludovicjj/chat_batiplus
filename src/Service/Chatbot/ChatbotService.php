@@ -2,10 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Chatbot;
 
 use App\Exception\UnsafeSqlException;
-use DateTimeImmutable;
+use App\Service\LLM\HumanResponseService;
+use App\Service\LLM\IntentService;
+use App\Service\LLM\SqlGeneratorService;
+use App\Service\Schema\DatabaseSchemaService;
+use App\Service\SqlSecurityService;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
 use Psr\Log\LoggerInterface;
@@ -18,10 +22,14 @@ readonly class ChatbotService
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private DatabaseSchemaService $schemaService,
-        private LlmService $llmService,
-        private SqlSecurityService $sqlSecurity,
-        private LoggerInterface $logger
+        private DatabaseSchemaService  $schemaService,
+        private SqlSecurityService     $sqlSecurity,
+        private LoggerInterface        $logger,
+
+        // LLM Service
+        private IntentService          $intentService,
+        private SqlGeneratorService    $sqlGeneratorService,
+        private HumanResponseService   $humanResponseService,
     ) {}
 
     /**
@@ -32,16 +40,16 @@ readonly class ChatbotService
         $startTime = microtime(true);
         
         try {
-            $this->logger->info('Processing user question', [
-                'question' => $question,
-                'timestamp' => new DateTimeImmutable()
-            ]);
+            // Step 0: Classify user intent
+            $intent = $this->intentService->classify($question);
 
             // Step 1: Get database schema
             $schema = $this->schemaService->getTablesStructure();
             
             // Step 2: Generate SQL query using LLM
-            $generatedSql = $this->llmService->generateSqlQuery($question, $schema);
+            $generatedSql = $this->sqlGeneratorService->generateForIntent($question, $schema, $intent);
+
+            dd($question, $generatedSql);
             
             // Step 3: Validate SQL query for security
             $validatedSql = $this->sqlSecurity->validateQuery($generatedSql);
@@ -50,17 +58,20 @@ readonly class ChatbotService
             $results = $this->executeQuery($validatedSql);
             
             // Step 5: Generate human-readable response
-            $humanResponse = $this->llmService->generateHumanResponse(
+            $humanResponse = $this->humanResponseService->generateHumanResponse(
                 $question,
                 $results,
                 $validatedSql
             );
             
+            // Step 6: Check if download is requested
+            $downloadInfo = $this->checkForDownloadRequest($humanResponse, $results, $question);
+            
             $executionTime = microtime(true) - $startTime;
             
-            return [
+            $response = [
                 'success' => true,
-                'response' => $humanResponse,
+                'response' => $downloadInfo['cleaned_response'],
                 'metadata' => [
                     'sql_query' => $validatedSql,
                     'execution_time' => round($executionTime, 3),
@@ -69,29 +80,27 @@ readonly class ChatbotService
                 ]
             ];
             
+            // Add download info if requested
+            if ($downloadInfo['requested']) {
+                $response['download'] = $downloadInfo['download_data'];
+            }
+            
+            return $response;
+            
         } catch (UnsafeSqlException $e) {
-            $this->logger->warning('Unsafe SQL query blocked', [
-                'question' => $question,
-                'error' => $e->getMessage()
-            ]);
-
             return [
                 'success' => false,
                 'error' => 'Votre question a généré une requête non autorisée pour des raisons de sécurité.',
                 'error_type' => 'security',
+                'error_message' => $e->getMessage(),
             ];
             
         } catch (Exception $e) {
-            $this->logger->error('Error processing question', [
-                'question' => $question,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
             return [
                 'success' => false,
                 'error' => 'Une erreur est survenue lors du traitement de votre question.',
-                'error_type' => 'general'
+                'error_type' => 'general',
+                'error_message' => $e->getMessage(),
             ];
         }
     }
@@ -136,5 +145,65 @@ readonly class ChatbotService
             // Catch any other unexpected exceptions
             throw new RuntimeException("Erreur inattendue lors de l'exécution de la requête");
         }
+    }
+
+    /**
+     * Check if the LLM response contains a download request and process it
+     */
+    private function checkForDownloadRequest(string $response, array $results, string $originalQuestion): array
+    {
+        $downloadRequested = str_contains($response, '[DOWNLOAD_REQUEST]');
+        
+        if ($downloadRequested) {
+            // Remove the marker from the response
+            $cleanedResponse = str_replace('[DOWNLOAD_REQUEST]', '', $response);
+            $cleanedResponse = trim($cleanedResponse);
+            
+            // Generate download info (placeholder for now)
+            $downloadData = [
+                'available' => true,
+                'file_count' => count($results),
+                'estimated_size' => $this->estimateDownloadSize($results),
+                'message' => '📎 Génération du fichier de téléchargement en cours...'
+            ];
+            
+            $this->logger->info('Download requested', [
+                'question' => $originalQuestion,
+                'result_count' => count($results)
+            ]);
+            
+            return [
+                'requested' => true,
+                'cleaned_response' => $cleanedResponse,
+                'download_data' => $downloadData
+            ];
+        }
+        
+        return [
+            'requested' => false,
+            'cleaned_response' => $response,
+            'download_data' => null
+        ];
+    }
+    
+    /**
+     * Estimate download size based on result count
+     */
+    private function estimateDownloadSize(array $results): string
+    {
+        $count = count($results);
+        
+        if ($count === 0) {
+            return '0 KB';
+        }
+        
+        // Rough estimation: ~500KB per PDF report
+        $estimatedBytes = $count * 500 * 1024;
+        
+        if ($estimatedBytes < 1024 * 1024) {
+            return round($estimatedBytes / 1024) . ' KB';
+        }
+        
+        return round($estimatedBytes / (1024 * 1024), 1) . ' MB';
     }
 }
