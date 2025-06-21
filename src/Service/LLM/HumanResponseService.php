@@ -2,13 +2,23 @@
 
 namespace App\Service\LLM;
 
+use Generator;
+
 class HumanResponseService extends AbstractLLMService
 {
     /**
      * Generate human-readable response from SQL results
      */
-    public function generateHumanResponse(string $originalQuestion, array $sqlResults, string $executedSql): string
-    {
+    public function generateHumanResponse(
+        string $originalQuestion,
+        array $sqlResults,
+        string $executedSql,
+        string $intent
+    ): string {
+        if ($intent === IntentService::INTENT_DOWNLOAD) {
+            return $this->generateDownloadResponse($sqlResults);
+        }
+
         $systemPrompt = $this->buildSystemPromptForHumanResponse();
 
         $userPrompt = sprintf(
@@ -19,6 +29,48 @@ class HumanResponseService extends AbstractLLMService
         );
 
         return $this->callLlm($systemPrompt, $userPrompt);
+    }
+
+    public function generateStreamingHumanResponse(
+        string $originalQuestion,
+        array $sqlResults,
+        string $executedSql,
+    ): Generator {
+        $systemPrompt = $this->buildSystemPromptForHumanResponse();
+
+        $userPrompt = sprintf(
+            "Question originale: %s\n\nRequête SQL exécutée: %s\n\nRésultats: %s\n\nFournis une réponse claire et compréhensible.",
+            $originalQuestion,
+            $executedSql,
+            json_encode($sqlResults, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+        );
+
+        // Call LLM with stream mode
+        yield from $this->callLlmStreaming($systemPrompt, $userPrompt);
+    }
+
+    public function generateStreamingDownloadResponse(array $sqlResults): Generator
+    {
+        $response = $this->generateDownloadResponse($sqlResults);
+        $words = explode(' ', $response);
+
+        foreach ($words as $index => $word) {
+            yield $word . ($index < count($words) - 1 ? ' ' : '');
+
+            // Délai entre les mots pour simuler la frappe
+            usleep(100000); // 100ms entre chaque mot
+        }
+    }
+
+    private function generateDownloadResponse(array $sqlResults): string
+    {
+        $count = count($sqlResults);
+
+        return match (true) {
+            $count === 0 => "Aucun rapport trouvé correspondant à votre demande.",
+            $count === 1 => "J'ai trouvé 1 rapport correspondant à votre demande. Préparation du téléchargement...",
+            default => "J'ai trouvé {$count} rapports correspondant à votre demande. Cela peut prendre quelques instants pour générer l'archive..."
+        };
     }
 
     private function buildSystemPromptForHumanResponse(): string

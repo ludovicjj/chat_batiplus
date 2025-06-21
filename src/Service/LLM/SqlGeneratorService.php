@@ -21,13 +21,56 @@ class SqlGeneratorService extends AbstractLLMService
     private function buildSystemPromptForSqlWithIntent(array $databaseSchema, string $intent): string
     {
         $schemaDescription = "Voici la structure de la base de données d'une entreprise de bâtiment:\n\n";
+        $tablesWithDeletedAt = [];
+        $tablesWithIsEnabled = [];
 
         foreach ($databaseSchema as $table => $columns) {
             $schemaDescription .= "Table: {$table}\n";
             $schemaDescription .= "Colonnes: " . implode(', ', $columns) . "\n\n";
+
+            // Identifier les tables avec deleted_at et is_enabled
+            if (in_array('deleted_at', $columns)) {
+                $tablesWithDeletedAt[] = $table;
+                $schemaDescription .= "ℹ️ Cette table contient une colonne 'deleted_at' pour gérer les suppressions logiques\n";
+            }
+            if (in_array('is_enabled', $columns)) {
+                $tablesWithIsEnabled[] = $table;
+                $schemaDescription .= "ℹ️ Cette table contient une colonne 'is_enabled' pour gérer les activations\n";
+            }
+            $schemaDescription .= "\n";
         }
 
-        $baseInstructions = $schemaDescription .
+        $logicRules = "LOGIQUE DE FILTRAGE INTELLIGENT:\n\n";
+
+        if (!empty($tablesWithDeletedAt)) {
+            $logicRules .= "POUR LES TABLES AVEC 'deleted_at' (" . implode(', ', $tablesWithDeletedAt) . "):\n";
+            $logicRules .= "• PAR DÉFAUT: Ajouter WHERE deleted_at IS NULL (exclure les supprimés)\n";
+            $logicRules .= "• SAUF SI la question contient des mots comme:\n";
+            $logicRules .= "  - 'tous', 'toutes', 'total', 'ensemble'\n";
+            $logicRules .= "  - 'y compris', 'même', 'également'\n";
+            $logicRules .= "  - 'supprimés', 'effacés', 'archivés', 'désactivés'\n";
+            $logicRules .= "  → Dans ce cas, NE PAS ajouter le filtre deleted_at\n\n";
+            $logicRules .= "Exemples:\n";
+            $logicRules .= "• 'Liste des collaborateurs' → WHERE deleted_at IS NULL\n";
+            $logicRules .= "• 'Tous les collaborateurs' → PAS de filtre deleted_at\n";
+            $logicRules .= "• 'Collaborateurs y compris supprimés' → PAS de filtre deleted_at\n\n";
+        }
+
+        if (!empty($tablesWithIsEnabled)) {
+            $logicRules .= "POUR LES TABLES AVEC 'is_enabled' (" . implode(', ', $tablesWithIsEnabled) . "):\n";
+            $logicRules .= "• PAR DÉFAUT: Ajouter WHERE is_enabled = TRUE (seulement les actifs)\n";
+            $logicRules .= "• SAUF SI la question demande explicitement les inactifs ou tous\n\n";
+        }
+
+        $tablesWithoutDeletedAt = array_diff(array_keys($databaseSchema), $tablesWithDeletedAt);
+        if (!empty($tablesWithoutDeletedAt)) {
+            $logicRules .= "POUR LES TABLES SANS 'deleted_at' (" . implode(', ', $tablesWithoutDeletedAt) . "):\n";
+            $logicRules .= "• JAMAIS ajouter WHERE deleted_at IS NULL (cette colonne n'existe pas)\n";
+            $logicRules .= "• Utiliser la table directement sans filtre de suppression\n\n";
+        }
+
+
+        $baseInstructions = $schemaDescription . $logicRules .
             "INSTRUCTIONS IMPORTANTES:\n" .
             "- Génère UNIQUEMENT des requêtes SELECT\n" .
             "- N'utilise que les tables et colonnes mentionnées ci-dessus\n" .
@@ -35,7 +78,7 @@ class SqlGeneratorService extends AbstractLLMService
             "- Retourne UNIQUEMENT le code SQL, sans explications\n" .
             "- Limite les résultats si approprié (LIMIT)\n" .
             "RÈGLES MÉTIER:\n" .
-            "- PAR DÉFAUT: ajouter WHERE deleted_at IS NULL (exclure supprimés)\n" .
+            "- PAR DÉFAUT: si la table contient une colonne 'deleted_at', ajouter WHERE deleted_at IS NULL (exclure supprimés),\n" .
             "- Pour les collaborateurs: ajouter is_enabled = TRUE\n" .
             "- SAUF si l'utilisateur utilise des mots comme: tous, total, ensemble, y compris, même, supprimés, effacés, archivés\n";
 

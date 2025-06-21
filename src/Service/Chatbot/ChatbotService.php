@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Chatbot;
 
 use App\Exception\UnsafeSqlException;
+use App\Service\DownloadService;
 use App\Service\LLM\HumanResponseService;
 use App\Service\LLM\IntentService;
 use App\Service\LLM\SqlGeneratorService;
@@ -25,6 +26,7 @@ readonly class ChatbotService
         private DatabaseSchemaService  $schemaService,
         private SqlSecurityService     $sqlSecurity,
         private LoggerInterface        $logger,
+        private DownloadService        $downloadService,
 
         // LLM Service
         private IntentService          $intentService,
@@ -37,6 +39,9 @@ readonly class ChatbotService
      */
     public function processQuestion(string $question): array
     {
+        // Peux-tu me donner tous les rapports ?
+        // Peux tu me donner des informations sur le collaborateur ludovic.jahan@23prod.com ?
+        // Peux tu me donner le nom des différentes agences ?
         $startTime = microtime(true);
         
         try {
@@ -48,8 +53,6 @@ readonly class ChatbotService
             
             // Step 2: Generate SQL query using LLM
             $generatedSql = $this->sqlGeneratorService->generateForIntent($question, $schema, $intent);
-
-            dd($question, $generatedSql);
             
             // Step 3: Validate SQL query for security
             $validatedSql = $this->sqlSecurity->validateQuery($generatedSql);
@@ -61,32 +64,18 @@ readonly class ChatbotService
             $humanResponse = $this->humanResponseService->generateHumanResponse(
                 $question,
                 $results,
-                $validatedSql
+                $validatedSql,
+                $intent
             );
             
-            // Step 6: Check if download is requested
-            $downloadInfo = $this->checkForDownloadRequest($humanResponse, $results, $question);
-            
-            $executionTime = microtime(true) - $startTime;
-            
-            $response = [
-                'success' => true,
-                'response' => $downloadInfo['cleaned_response'],
-                'metadata' => [
-                    'sql_query' => $validatedSql,
-                    'execution_time' => round($executionTime, 3),
-                    'result_count' => count($results),
-                    'raw_results' => $results
-                ]
-            ];
-            
-            // Add download info if requested
-            if ($downloadInfo['requested']) {
-                $response['download'] = $downloadInfo['download_data'];
-            }
-            
-            return $response;
-            
+            // Step 6: Handle response by intent
+            return $this->handleResponseByIntent(
+                $humanResponse,
+                $results,
+                $intent,
+                $validatedSql,
+                $startTime
+            );
         } catch (UnsafeSqlException $e) {
             return [
                 'success' => false,
@@ -105,7 +94,46 @@ readonly class ChatbotService
         }
     }
 
-    private function executeQuery(string $sql): array
+    public function classify(string $question): string
+    {
+        return $this->intentService->classify($question);
+    }
+
+    public function getTablesStructure(): array
+    {
+        return $this->schemaService->getTablesStructure();
+    }
+
+    public function generateSql(string $question, array $schema, string $intent): string
+    {
+        return $this->sqlGeneratorService->generateForIntent($question, $schema, $intent);
+    }
+
+    /**
+     * @throws UnsafeSqlException
+     */
+    public function validateSql(string $generatedSql): string
+    {
+       return $this->sqlSecurity->validateQuery($generatedSql);
+    }
+
+    /**
+     * Generate streaming response from SQL results using LLM
+     */
+    public function generateStreamingResponse(string $question, array $sqlResults, string $validatedSql, string $intent): \Generator
+    {
+        if ($intent === IntentService::INTENT_DOWNLOAD) {
+            yield from $this->humanResponseService->generateStreamingDownloadResponse($sqlResults);
+        } else {
+            yield from $this->humanResponseService->generateStreamingHumanResponse(
+                $question,
+                $sqlResults,
+                $validatedSql,
+            );
+        }
+    }
+
+    public function executeQuery(string $sql): array
     {
         try {
             $connection = $this->entityManager->getConnection();
@@ -150,60 +178,81 @@ readonly class ChatbotService
     /**
      * Check if the LLM response contains a download request and process it
      */
-    private function checkForDownloadRequest(string $response, array $results, string $originalQuestion): array
-    {
-        $downloadRequested = str_contains($response, '[DOWNLOAD_REQUEST]');
-        
-        if ($downloadRequested) {
-            // Remove the marker from the response
-            $cleanedResponse = str_replace('[DOWNLOAD_REQUEST]', '', $response);
-            $cleanedResponse = trim($cleanedResponse);
-            
-            // Generate download info (placeholder for now)
-            $downloadData = [
-                'available' => true,
-                'file_count' => count($results),
-                'estimated_size' => $this->estimateDownloadSize($results),
-                'message' => '📎 Génération du fichier de téléchargement en cours...'
-            ];
-            
-            $this->logger->info('Download requested', [
-                'question' => $originalQuestion,
+    private function handleResponseByIntent(
+        string $humanResponse,
+        array $results,
+        string $intent,
+        string $validatedSql,
+        $startTime
+    ): array {
+        $executionTime = microtime(true) - $startTime;
+
+        // Base response structure
+        $response = [
+            'success' => true,
+            'response' => $humanResponse,
+            'metadata' => [
+                'intent' => $intent,
+                'sql_query' => $validatedSql,
+                'execution_time' => $executionTime,
                 'result_count' => count($results)
-            ]);
-            
-            return [
-                'requested' => true,
-                'cleaned_response' => $cleanedResponse,
-                'download_data' => $downloadData
+            ]
+        ];
+
+        // Handle specific intent logic
+        switch ($intent) {
+            case IntentService::INTENT_DOWNLOAD:
+                return $this->handleDownloadIntent($response, $results);
+
+            case IntentService::INTENT_INFO:
+            default:
+                $response['download'] = [
+                    'available' => false,
+                    'message' => null
+                ];
+                $response['raw_results'] = $results;
+                return $response;
+        }
+    }
+
+    private function handleDownloadIntent(array $baseResponse,  array $results): array
+    {
+        try {
+            $downloadResult = $this->downloadService->generateDownloadPackage($results);
+
+            if ($downloadResult['success']) {
+                $stats = $downloadResult['stats'];
+
+                $baseResponse['download'] = [
+                    'available' => true,
+                    'status' => 'ready',
+                    'download_url' => $downloadResult['download_url'],
+                    'filename' => $downloadResult['file_name'],
+                    'file_count' => $stats['downloaded'],
+                    'estimated_size' => $stats['total_size'],
+                    'message' => 'Votre archive ZIP est prête au téléchargement!',
+                    'stats' => $stats
+                ];
+            } else {
+                $baseResponse['download'] = [
+                    'available' => false,
+                    'status' => 'error',
+                    'message' => $downloadResult['error']
+                ];
+            }
+        } catch (Exception $e) {
+            $baseResponse['download'] = [
+                'available' => false,
+                'status' => 'error',
+                'message' => 'Erreur technique'
             ];
         }
-        
-        return [
-            'requested' => false,
-            'cleaned_response' => $response,
-            'download_data' => null
-        ];
+
+        return $baseResponse;
     }
-    
-    /**
-     * Estimate download size based on result count
-     */
-    private function estimateDownloadSize(array $results): string
+
+    public function handleDownloadGeneration(array $results, string $question): void
     {
-        $count = count($results);
-        
-        if ($count === 0) {
-            return '0 KB';
-        }
-        
-        // Rough estimation: ~500KB per PDF report
-        $estimatedBytes = $count * 500 * 1024;
-        
-        if ($estimatedBytes < 1024 * 1024) {
-            return round($estimatedBytes / 1024) . ' KB';
-        }
-        
-        return round($estimatedBytes / (1024 * 1024), 1) . ' MB';
+        $this->downloadService->streamDownloadGeneration($results, $question);
     }
 }

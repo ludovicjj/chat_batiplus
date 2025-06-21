@@ -1,0 +1,106 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}ChatBot BatiPlus{% endblock %}
+
+    {% block stylesheets %}
+        {{ parent() }}
+        {{ encore_entry_link_tags('chat_stream') }}
+    {% endblock %}
+
+    {% block javascripts %}
+        {{ parent() }}
+        {{ encore_entry_script_tags('chat_stream') }}
+    {% endblock %}
+
+{% block body %}
+    <div class="chat-container">
+        <!-- Header -->
+        <header class="chat-header">
+            <div class="container-fluid px-4">
+                <div class="d-flex align-items-center justify-content-between py-3">
+                    <div>
+                        <h1 class="mb-1">
+                            ChatBot BatiPlus
+                        </h1>
+                        <small class="text-muted">Assistant virtuel pour vos données</small>
+                    </div>
+                    <div class="status-badge">
+                        <div class="status-dot"></div>
+                        En ligne
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Chat Messages Area -->
+        <main class="chat-main">
+            <div class="container-fluid px-4 h-100">
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Welcome Message -->
+                    <div class="welcome-message">
+                        <div class="welcome-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <h3>Bonjour ! 👋</h3>
+                        <p>Je suis votre assistant virtuel BatiPlus. Comment puis-je vous aider aujourd'hui ?</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Typing Indicator -->
+            <div class="typing-indicator d-none" id="typingIndicator">
+                <div class="message bot-message">
+                    <div class="message-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <div class="message-bubble">
+                            <div class="typing-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Input Area -->
+        <footer class="chat-footer">
+            <div class="container-fluid px-4">
+                <div class="chat-input-container">
+                    <form id="chatForm">
+                        <div class="input-group">
+                        <textarea
+                                class="chat-input"
+                                id="messageInput"
+                                placeholder="Tapez votre question ici..."
+                                rows="1"
+                                maxlength="1000"
+                                autocomplete="off"
+                                aria-label="chat-input"
+                        ></textarea>
+                            <button class="send-button" type="submit" id="sendButton">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Suggestions -->
+                    <div class="input-suggestions">
+                        <div class="suggestion-chip" data-suggestion="Combien de clients avons-nous ?">
+                            💼 Combien de clients avons-nous ?
+                        </div>
+                        <div class="suggestion-chip" data-suggestion="Quels projets sont en cours ?">
+                            🏗️ Quels projets sont en cours ?
+                        </div>
+                        <div class="suggestion-chip" data-suggestion="Résumé des ventes ce mois">
+                            📊 Résumé des ventes ce mois
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+{% endblock %}

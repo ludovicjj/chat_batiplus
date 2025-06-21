@@ -87,7 +87,13 @@ class ChatBot {
 
             if (data.success) {
                 // Successful response
-                this.addMessage(data.response, 'bot', data.metadata);
+                this.addMessage(
+                    data.response,
+                    'bot',
+                    data.metadata,
+                    false,
+                    data.download || null
+                );
             } else {
                 // Server or security error
                 const errorMessage = data.error || "Une erreur s'est produite.";
@@ -113,7 +119,21 @@ class ChatBot {
         });
     }
 
-    addMessage(content, sender, metadata = null, isError = false) {
+    /**
+     *
+     * @param {string} content
+     * @param {string} sender
+     * @param {object|null} metadata
+     * @param {boolean} isError
+     * @param {object|null} downloadInfo
+     */
+    addMessage(
+        content,
+        sender,
+        metadata = null,
+        isError = false,
+        downloadInfo = null
+    ) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}-message`;
 
@@ -134,16 +154,53 @@ class ChatBot {
             `;
         }
 
+        let downloadHtml = '';
+        if (downloadInfo && downloadInfo.available && sender === 'bot') {
+            const statusIcon = downloadInfo.status === 'pending' ? 'fas fa-spinner fa-spin' :
+                downloadInfo.status === 'ready' ? 'fas fa-check-circle text-success' :
+                    'fas fa-exclamation-triangle text-warning';
+
+            let downloadButton = '';
+
+            if (downloadInfo.status === 'ready' && downloadInfo?.download_url) {
+                downloadButton = `<a href="${downloadInfo.download_url}" class="btn btn-primary btn-sm mt-2" download>
+                    <i class="fas fa-download me-1"></i>Télécharger l'archive
+                </a>`
+            }
+
+            downloadHtml = `
+                <div class="download-section mt-3">
+                    <div class="download-header d-flex flex-column">
+                        <div class="mb-3">
+                            <i class="${statusIcon} me-2"></i>
+                            <strong>Téléchargement</strong><br>
+                        </div>
+                        <small class="text-muted">${downloadInfo.message}</small>
+                    </div>
+                    <div class="download-info d-flex flex-row gap-2">
+                        <div class="download-file">
+                            <small class="text-muted">Fichiers: ${downloadInfo.file_count}</small>
+                        </div>
+                        <div class="download-size">
+                            <small class="text-muted">Taille estimée: ${downloadInfo.estimated_size}</small>
+                        </div>
+                    </div>
+                    ${downloadButton}
+                </div>
+            `;
+        }
+
         messageDiv.innerHTML = `
             <div class="message-avatar">
                 <i class="fas fa-${sender === 'user' ? 'user' : 'robot'}"></i>
             </div>
             <div class="message-content">
                 <div class="message-bubble ${isError ? 'error' : ''}">
-                    ${content}
+                    ${sender === 'bot' ? this.convertMarkdownToHtml(content) : content}
                 </div>
                 <div class="message-time">${time}</div>
                 ${metadataHtml}
+                ${downloadHtml}
             </div>
         `;
 
@@ -182,6 +239,20 @@ class ChatBot {
 
     scrollToBottom() {
         this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    }
+
+    convertMarkdownToHtml(text) {
+        return text
+            // Gras : **texte** → <strong>texte</strong>
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            // Italique : *texte* → <em>texte</em>
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            // Listes : - item → <li>item</li>
+            .replace(/^- (.*$)/gm, '<li>$1</li>')
+            // Remplacer les groupes de <li> par <ul>
+            .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+            // Sauts de ligne
+            .replace(/\n/g, '<br>');
     }
 }
 
