@@ -68,7 +68,7 @@ class ChatbotController extends AbstractController
         StreamingResponseService $streamingResponseService
     ): Response {
         // Peux-tu me donner tous les rapports ?
-        // Peux tu me donner des informations sur le collaborateur ludovic.jahan@23prod.com ?
+        // Peux tu me donner des informations sur le collaborateur  ?
         // Peux tu me donner le nom des différentes agences ?
         $result = $requestHandler->handle($request);
         return $streamingResponseService->createStreamingResponse($result['question']);
