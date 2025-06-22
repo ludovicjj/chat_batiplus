@@ -2,20 +2,23 @@
 
 namespace App\Service\LLM;
 
+use Generator;
 use JsonException;
+use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Throwable;
 
 abstract class AbstractLLMService
 {
+    private const DATA_PREFIX = 'data: ';
+
     public function __construct(
-        private HttpClientInterface $httpClient,
+        private HttpClientInterface                      $httpClient,
         #[Autowire('%env(LLM_API_URL)%')] private string $apiUrl,
         #[Autowire('%env(LLM_API_KEY)%')] private string $apiKey,
-        #[Autowire('%env(LLM_MODEL)%')] private string $llmModel,
-        private float $temperature = 0.1,
+        #[Autowire('%env(LLM_MODEL)%')] private string   $llmModel,
+        private float                                    $temperature = 0.1,
     ) {}
 
     protected function callLlm(string $systemPrompt, string $userPrompt): string
@@ -48,20 +51,20 @@ abstract class AbstractLLMService
             $data = $response->toArray();
 
             if (!isset($data['choices'][0]['message']['content'])) {
-                throw new \RuntimeException('Invalid response from LLM API');
+                throw new RuntimeException('Invalid response from LLM API');
             }
 
             return trim($data['choices'][0]['message']['content']);
 
-        } catch (TransportExceptionInterface $e) {
-            throw new \RuntimeException('Failed to communicate with LLM service: ' . $e->getMessage());
+        } catch (Throwable $e) {
+            throw new RuntimeException('Failed to communicate with LLM service: ' . $e->getMessage());
         }
     }
 
     /**
-     * Call LLM with streaming response (comme votre collègue)
+     * Call LLM with streaming response
      */
-    protected function callLlmStreaming(string $systemPrompt, string $userPrompt): \Generator
+    protected function callLlmStreaming(string $systemPrompt, string $userPrompt): Generator
     {
         try {
             $response = $this->httpClient->request('POST', $this->apiUrl . '/chat/completions', [
@@ -90,7 +93,7 @@ abstract class AbstractLLMService
                 'max_duration' => 600,
             ]);
 
-            // ⭐ Streamer chaque chunk reçu du LLM
+            // Stream each chucks send by LLM
             foreach ($this->httpClient->stream($response) as $chunk) {
                 $content = $chunk->getContent();
 
@@ -98,26 +101,26 @@ abstract class AbstractLLMService
                 $lines = explode("\n", $content);
 
                 foreach ($lines as $line) {
-                    if (str_starts_with($line, 'data: ')) {
-                        $data = substr($line, 6); // Enlever "data: "
+                    if (str_starts_with($line, self::DATA_PREFIX)) {
+                        // remove prefix 'data: '
+                        $data = substr($line, strlen(self::DATA_PREFIX));
 
                         // Si c'est la fin du stream
                         if (trim($data) === '[DONE]') {
-                            return; // Terminer le générateur
+                            return; // end here
                         }
 
-                        // Parser le JSON d'OpenAI
+                        // Parse Json
                         try {
                             $json = json_decode(trim($data), true, 512, JSON_THROW_ON_ERROR);
 
-                            // Extraire le contenu du chunk
+                            // Fetch content from chunk
                             if (isset($json['choices'][0]['delta']['content'])) {
                                 $textChunk = $json['choices'][0]['delta']['content'];
-                                yield $textChunk; // ⭐ Envoyer le chunk au frontend
+                                yield $textChunk;
                             }
 
-                        } catch (JsonException $e) {
-                            // Ignorer les lignes qui ne sont pas du JSON valide
+                        } catch (JsonException) {
                             continue;
                         }
                     }

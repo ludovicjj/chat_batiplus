@@ -5,16 +5,14 @@ declare(strict_types=1);
 namespace App\Service\Chatbot;
 
 use App\Exception\UnsafeSqlException;
-use App\Service\DownloadService;
+use App\Service\Archive\ReportArchiveService;
 use App\Service\LLM\HumanResponseService;
 use App\Service\LLM\IntentService;
 use App\Service\LLM\SqlGeneratorService;
-use App\Service\Schema\DatabaseSchemaService;
-use App\Service\SqlSecurityService;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Service\SQL\SqlExecutorService;
+use App\Service\SQL\SqlSchemaService;
+use App\Service\SQL\SqlSecurityService;
 use Exception;
-use Psr\Log\LoggerInterface;
-use RuntimeException;
 
 /**
  * Main chatbot service that orchestrates the entire workflow
@@ -22,11 +20,10 @@ use RuntimeException;
 readonly class ChatbotService
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
-        private DatabaseSchemaService  $schemaService,
+        private SqlSchemaService       $schemaService,
         private SqlSecurityService     $sqlSecurity,
-        private LoggerInterface        $logger,
-        private DownloadService        $downloadService,
+        private ReportArchiveService   $downloadService,
+        private SqlExecutorService     $sqlExecutor,
 
         // LLM Service
         private IntentService          $intentService,
@@ -39,9 +36,6 @@ readonly class ChatbotService
      */
     public function processQuestion(string $question): array
     {
-        // Peux-tu me donner tous les rapports ?
-        // Peux tu me donner des informations sur le collaborateur ludovic.jahan@23prod.com ?
-        // Peux tu me donner le nom des différentes agences ?
         $startTime = microtime(true);
         
         try {
@@ -58,7 +52,7 @@ readonly class ChatbotService
             $validatedSql = $this->sqlSecurity->validateQuery($generatedSql);
             
             // Step 4: Execute the query
-            $results = $this->executeQuery($validatedSql);
+            $results = $this->sqlExecutor->executeQuery($validatedSql);
             
             // Step 5: Generate human-readable response
             $humanResponse = $this->humanResponseService->generateHumanResponse(
@@ -91,87 +85,6 @@ readonly class ChatbotService
                 'error_type' => 'general',
                 'error_message' => $e->getMessage(),
             ];
-        }
-    }
-
-    public function classify(string $question): string
-    {
-        return $this->intentService->classify($question);
-    }
-
-    public function getTablesStructure(): array
-    {
-        return $this->schemaService->getTablesStructure();
-    }
-
-    public function generateSql(string $question, array $schema, string $intent): string
-    {
-        return $this->sqlGeneratorService->generateForIntent($question, $schema, $intent);
-    }
-
-    /**
-     * @throws UnsafeSqlException
-     */
-    public function validateSql(string $generatedSql): string
-    {
-       return $this->sqlSecurity->validateQuery($generatedSql);
-    }
-
-    /**
-     * Generate streaming response from SQL results using LLM
-     */
-    public function generateStreamingResponse(string $question, array $sqlResults, string $validatedSql, string $intent): \Generator
-    {
-        if ($intent === IntentService::INTENT_DOWNLOAD) {
-            yield from $this->humanResponseService->generateStreamingDownloadResponse($sqlResults);
-        } else {
-            yield from $this->humanResponseService->generateStreamingHumanResponse(
-                $question,
-                $sqlResults,
-                $validatedSql,
-            );
-        }
-    }
-
-    public function executeQuery(string $sql): array
-    {
-        try {
-            $connection = $this->entityManager->getConnection();
-            
-            // Set a reasonable timeout for MySQL
-            try {
-                $connection->executeStatement('SET SESSION max_execution_time = 30000'); // 30 seconds
-            } catch (Exception $e) {
-                $this->logger->warning('Failed to set query timeout', ['error' => $e->getMessage()]);
-            }
-
-            // Prepare query
-            try {
-                $statement = $connection->prepare($sql);
-            } catch (Exception $e) {
-                throw new RuntimeException('Erreur de préparation de la requête SQL: ' . $e->getMessage());
-            }
-            
-            // Execute the query
-            try {
-                $result = $statement->executeQuery();
-            } catch (Exception $e) {
-                throw new RuntimeException("Erreur d'exécution de la requête: " . $e->getMessage());
-            }
-            
-            // Fetch results
-            try {
-                return $result->fetchAllAssociative();
-            } catch (Exception $e) {
-                throw new RuntimeException("Erreur de récupération des résultats: " . $e->getMessage());
-            }
-            
-        } catch (RuntimeException $e) {
-            // Re-throw runtime exceptions (our custom errors)
-            throw $e;
-        } catch (Exception $e) {
-            // Catch any other unexpected exceptions
-            throw new RuntimeException("Erreur inattendue lors de l'exécution de la requête");
         }
     }
 
@@ -249,10 +162,5 @@ readonly class ChatbotService
         }
 
         return $baseResponse;
-    }
-
-    public function handleDownloadGeneration(array $results, string $question): void
-    {
-        $this->downloadService->streamDownloadGeneration($results, $question);
     }
 }

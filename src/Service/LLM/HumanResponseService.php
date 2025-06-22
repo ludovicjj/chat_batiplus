@@ -7,7 +7,7 @@ use Generator;
 class HumanResponseService extends AbstractLLMService
 {
     /**
-     * Generate human-readable response from SQL results
+     * Generate human-readable response from SQL results using LLM
      */
     public function generateHumanResponse(
         string $originalQuestion,
@@ -20,36 +20,41 @@ class HumanResponseService extends AbstractLLMService
         }
 
         $systemPrompt = $this->buildSystemPromptForHumanResponse();
-
-        $userPrompt = sprintf(
-            "Question originale: %s\n\nRequête SQL exécutée: %s\n\nRésultats de la base de données: %s\n\nFournis une réponse claire et compréhensible à l'utilisateur.",
-            $originalQuestion,
-            $executedSql,
-            json_encode($sqlResults, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
-        );
+        $userPrompt = $this->buildUserPrompt($originalQuestion, $sqlResults, $executedSql);
 
         return $this->callLlm($systemPrompt, $userPrompt);
     }
 
-    public function generateStreamingHumanResponse(
+    /**
+     * Generate streaming response from SQL results using LLM
+     * @return Generator<string> Yields string chunks
+     */
+    public function generateStreamingResponse(string $question, array $sqlResults, string $validatedSql, string $intent): Generator
+    {
+        if ($intent === IntentService::INTENT_DOWNLOAD) {
+            yield from $this->generateStreamingDownloadResponse($sqlResults);
+        } else {
+            yield from $this->generateStreamingHumanResponse(
+                $question,
+                $sqlResults,
+                $validatedSql,
+            );
+        }
+    }
+
+    private function generateStreamingHumanResponse(
         string $originalQuestion,
         array $sqlResults,
-        string $executedSql,
+        string $executedSql
     ): Generator {
         $systemPrompt = $this->buildSystemPromptForHumanResponse();
-
-        $userPrompt = sprintf(
-            "Question originale: %s\n\nRequête SQL exécutée: %s\n\nRésultats: %s\n\nFournis une réponse claire et compréhensible.",
-            $originalQuestion,
-            $executedSql,
-            json_encode($sqlResults, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
-        );
+        $userPrompt = $this->buildUserPrompt($originalQuestion, $sqlResults, $executedSql);
 
         // Call LLM with stream mode
         yield from $this->callLlmStreaming($systemPrompt, $userPrompt);
     }
 
-    public function generateStreamingDownloadResponse(array $sqlResults): Generator
+    private function generateStreamingDownloadResponse(array $sqlResults): Generator
     {
         $response = $this->generateDownloadResponse($sqlResults);
         $words = explode(' ', $response);
@@ -71,6 +76,16 @@ class HumanResponseService extends AbstractLLMService
             $count === 1 => "J'ai trouvé 1 rapport correspondant à votre demande. Préparation du téléchargement...",
             default => "J'ai trouvé {$count} rapports correspondant à votre demande. Cela peut prendre quelques instants pour générer l'archive..."
         };
+    }
+
+    private function buildUserPrompt(string $originalQuestion, array $sqlResults, string $executedSql): string
+    {
+        return sprintf(
+            "Question originale: %s\n\nRequête SQL exécutée: %s\n\nRésultats: %s\n\nFournis une réponse claire et compréhensible.",
+            $originalQuestion,
+            $executedSql,
+            json_encode($sqlResults, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+        );
     }
 
     private function buildSystemPromptForHumanResponse(): string

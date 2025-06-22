@@ -3,7 +3,7 @@
 namespace App\Controller;
 
 use App\Exception\UnsafeSqlException;
-use App\Service\SqlSecurityService;
+use App\Service\SQL\SqlSecurityService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
