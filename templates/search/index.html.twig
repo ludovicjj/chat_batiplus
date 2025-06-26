@@ -1,0 +1,96 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Recherche ClientCases{% endblock %}
+
+{% block body %}
+    <div class="container mt-4">
+        <h1>🔍 Recherche ClientCases</h1>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="post">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="reference" class="form-label">Référence</label>
+                            <input type="text" class="form-control" id="reference" name="reference"
+                                   value="{{ criteria.reference ?? '' }}" placeholder="94P0242305">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="projectName" class="form-label">Nom du projet</label>
+                            <input type="text" class="form-control" id="projectName" name="projectName"
+                                   value="{{ criteria.projectName ?? '' }}" placeholder="LJA-TEST">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="agencyName" class="form-label">Agence</label>
+                            <input type="text" class="form-control" id="agencyName" name="agencyName"
+                                   value="{{ criteria.agencyName ?? '' }}" placeholder="AGENCE PARIS">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="clientName" class="form-label">Client</label>
+                            <input type="text" class="form-control" id="clientName" name="clientName"
+                                   value="{{ criteria.clientName ?? '' }}" placeholder="3F Résidences">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="status" class="form-label">Statut</label>
+                            <select class="form-control" id="status" name="status">
+                                <option value="">Tous les statuts</option>
+                                <option value="Conception" {{ criteria.status is defined and criteria.status == 'Conception' ? 'selected' : '' }}>Conception</option>
+                                <option value="Travaux" {{ criteria.status is defined and criteria.status == 'Travaux' ? 'selected' : '' }}>Travaux</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="global" class="form-label">Recherche globale</label>
+                            <input type="text" class="form-control" id="global" name="global"
+                                   value="{{ criteria.global ?? '' }}" placeholder="Mot-clé général">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">🔍 Rechercher</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Résultats -->
+        {% if results is defined and results|length > 0 %}
+            <div class="alert alert-success">
+                <strong>{{ total }} résultat(s) trouvé(s)</strong>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th>Score</th>
+                        <th>ID</th>
+                        <th>Référence</th>
+                        <th>Projet</th>
+                        <th>Client</th>
+                        <th>Agence</th>
+                        <th>Statut</th>
+                        <th>Manager</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for result in results %}
+                        <tr>
+                            <td><span class="badge bg-info">{{ result.score|round(2) }}</span></td>
+                            <td>{{ result.data.id }}</td>
+                            <td><strong>{{ result.data.reference }}</strong></td>
+                            <td>{{ result.data.projectName }}</td>
+                            <td>{{ result.data.clientName }}</td>
+                            <td>{{ result.data.agencyName }}</td>
+                            <td><span class="badge bg-primary">{{ result.data.statusName }}</span></td>
+                            <td>{{ result.data.managerName }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% elseif criteria is defined and criteria|length > 0 %}
+            <div class="alert alert-warning">
+                Aucun résultat trouvé pour ces critères.
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

@@ -1,0 +1,33 @@
+mappings:
+  dynamic: false
+  properties:
+    id:
+      type: integer
+    reference:
+      type: keyword  # Recherche exacte pour les références
+    projectName:
+      type: text
+      analyzer: french
+      fields:
+        keyword:
+          type: keyword  # Pour tri et filtre exact
+    agencyName:
+      type: text
+      analyzer: french
+      fields:
+        keyword:
+          type: keyword
+    clientName:
+      type: text
+      analyzer: french
+      fields:
+        keyword:
+          type: keyword
+    statusName:
+      type: keyword  # Status = filtre exact
+    managerName:
+      type: text
+      analyzer: french
+      fields:
+        keyword:
+          type: keyword

@@ -7,15 +7,12 @@ namespace App\Controller;
 use App\Exception\ValidatorException;
 use App\RequestHandler\Chatbot\Ask\RequestHandler;
 use App\Service\Chatbot\ChatbotService;
-use App\Service\LLM\IntentService;
-use App\Service\Streaming\ServerSentEventService;
 use App\Service\Streaming\StreamingResponseService;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Exception;
 

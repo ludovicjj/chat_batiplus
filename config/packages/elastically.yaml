@@ -1,0 +1,30 @@
+elastically:
+  connections:
+    default:
+      client:
+        # URL de votre cluster Elastic Cloud
+        hosts:
+          - '%env(ELASTIC_HOST)%'
+        username: '%env(ELASTIC_USER)%'
+        password: '%env(ELASTIC_PASSWORD)%'
+
+        # Transport configuration for HTTP client
+        transport_config:
+          http_client: 'Psr\Http\Client\ClientInterface'
+
+      # Path to the mapping directory
+      mapping_directory: '%kernel.project_dir%/config/elasticsearch/mappings'
+
+      # Bulk size for indexing
+      bulk_size: 100
+
+      # Index to class mapping - vous définirez cela selon vos besoins
+      index_class_mapping:
+        client_case: App\Dto\ClientCaseDto
+      # Exemple:
+      # products: App\Entity\Product
+      # users: App\Entity\User
+
+      # Serializer configuration
+      serializer:
+        context_mapping: []

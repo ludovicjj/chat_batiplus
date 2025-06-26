@@ -7,11 +7,13 @@
         "php": ">=8.2",
         "ext-ctype": "*",
         "ext-iconv": "*",
+        "ext-zip": "*",
         "aws/aws-sdk-php": "^3.346",
         "doctrine/dbal": "^3",
         "doctrine/doctrine-bundle": "^2.15",
         "doctrine/doctrine-migrations-bundle": "^3.4",
         "doctrine/orm": "^3.4",
+        "jolicode/elastically": "^2.0",
         "symfony/cache": "7.3.*",
         "symfony/console": "7.3.*",
         "symfony/dotenv": "7.3.*",
@@ -22,8 +24,7 @@
         "symfony/twig-bundle": "7.3.*",
         "symfony/validator": "7.3.*",
         "symfony/webpack-encore-bundle": "^2.2",
-        "symfony/yaml": "7.3.*",
-        "ext-zip": "*"
+        "symfony/yaml": "7.3.*"
     },
     "config": {
         "allow-plugins": {

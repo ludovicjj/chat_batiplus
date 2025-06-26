@@ -32,6 +32,18 @@ readonly class ChatbotService
     ) {}
 
     /**
+     * Get system status information
+     */
+    public function getSystemStatus(): array
+    {
+        return [
+            'database' => 'connected',
+            'allowed_tables' => $this->sqlSecurity->getAllowedTables(),
+            'timestamp' => new \DateTimeImmutable()
+        ];
+    }
+
+    /**
      * Process a user question and return a structured response
      */
     public function processQuestion(string $question): array
