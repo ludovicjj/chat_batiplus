@@ -7,16 +7,33 @@ settings:
         filter:
           - lowercase
           - asciifolding  # Supprime les accents
+  # Optimisations pour l'indexation en masse
+  refresh_interval: "30s"
+  number_of_replicas: 0
+  max_result_window: 50000
+
 mappings:
   dynamic: false
   properties:
+    # Identifiants et références
     id:
       type: integer
     reference:
       type: keyword  # Recherche exacte pour les références
+      fields:
+        normalized:
+          type: keyword
+          normalizer: lowercase_normalizer
+    shortReference:
+      type: keyword
+      fields:
+        normalized:
+          type: keyword
+          normalizer: lowercase_normalizer
+
+    # Informations générales du dossier
     projectName:
       type: text
-      analyzer: french
       fields:
         keyword:
           type: keyword  # Pour tri et filtre exact
@@ -25,7 +42,6 @@ mappings:
           normalizer: lowercase_normalizer
     agencyName:
       type: text
-      analyzer: french
       fields:
         keyword:
           type: keyword
@@ -34,7 +50,6 @@ mappings:
           normalizer: lowercase_normalizer
     clientName:
       type: text
-      analyzer: french
       fields:
         keyword:
           type: keyword
@@ -49,10 +64,129 @@ mappings:
           normalizer: lowercase_normalizer
     managerName:
       type: text
-      analyzer: french
       fields:
         keyword:
           type: keyword
         normalized:
           type: keyword
           normalizer: lowercase_normalizer
+
+    # Métriques calculées pour optimiser les requêtes
+    totalReports:
+      type: integer
+    totalReviews:
+      type: integer
+    hasReports:
+      type: boolean
+    hasReviews:
+      type: boolean
+
+    # Données textuelles pour la recherche globale
+    searchableText:
+      type: text
+      fields:
+        suggest:
+          type: completion
+          analyzer: simple
+
+    # Structure hiérarchique des rapports (nested)
+    reports:
+      type: nested
+      properties:
+        id:
+          type: integer
+        reference:
+          type: keyword
+          fields:
+            normalized:
+              type: keyword
+              normalizer: lowercase_normalizer
+        filename:
+          type: keyword
+        imported:
+          type: boolean
+        isDraft:
+          type: boolean
+        createdAt:
+          type: date
+          format: "yyyy-MM-dd'T'HH:mm:ss'Z'||yyyy-MM-dd HH:mm:ss"
+        reportTypeName:
+          type: text
+          fields:
+            keyword:
+              type: keyword
+            normalized:
+              type: keyword
+              normalizer: lowercase_normalizer
+        reportTypeCode:
+          type: keyword
+        s3Path:
+          type: keyword
+          index: false  # Pas indexé car utilisé uniquement pour le téléchargement
+
+        # Métriques par rapport
+        reviewsCount:
+          type: integer
+        hasReviews:
+          type: boolean
+
+        # Structure des avis (nested dans nested)
+        reviews:
+          type: nested
+          properties:
+            id:
+              type: integer
+            number:
+              type: keyword
+            observation:
+              type: text
+              fields:
+                keyword:
+                  type: keyword
+                  ignore_above: 2000  # Limite pour éviter les erreurs
+            visitedAt:
+              type: date
+              format: "yyyy-MM-dd'T'HH:mm:ss'Z'||yyyy-MM-dd HH:mm:ss"
+            createdAt:
+              type: date
+              format: "yyyy-MM-dd'T'HH:mm:ss'Z'||yyyy-MM-dd HH:mm:ss"
+            position:
+              type: integer
+            createdBy:
+              type: text
+              fields:
+                keyword:
+                  type: keyword
+            reviewGroupId:
+              type: integer
+            reviewGroupName:
+              type: keyword
+              fields:
+                normalized:
+                  type: keyword
+                  normalizer: lowercase_normalizer
+            reviewValueId:
+              type: integer
+            reviewValueName:
+              type: keyword
+              fields:
+                normalized:
+                  type: keyword
+                  normalizer: lowercase_normalizer
+
+    # Champs calculés pour les facettes et agrégations
+    reportTypes:
+      type: keyword  # Array des types de rapports présents
+    reviewValues:
+      type: keyword  # Array des valeurs d'avis présentes
+    reviewGroups:
+      type: keyword  # Array des groupes d'avis présents
+    hasObservations:
+      type: boolean  # Si au moins un avis a une observation
+    
+    # Métadonnées de traitement
+    indexedAt:
+      type: date
+      format: "yyyy-MM-dd'T'HH:mm:ss'Z'"
+    processingMode:
+      type: keyword

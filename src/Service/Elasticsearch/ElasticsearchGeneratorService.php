@@ -40,7 +40,16 @@ class ElasticsearchGeneratorService extends AbstractLLMService
         $queryInstructions .= "   - Pour agrégations exactes: utiliser les champs .keyword\n";
         $queryInstructions .= "   - ATTENTION: id est integer, pas keyword ! Utiliser {\"term\": {\"id\": 869}} pas {\"term\": {\"id.keyword\": \"869\"}}\n\n";
 
-        $queryInstructions .= "3. EXEMPLES DE REQUÊTES:\n";
+        $queryInstructions .= "3. GESTION DES CHAMPS VIDES ET NULL:\n";
+        $queryInstructions .= "   - \"sans manager\", \"pas de manager\", \"manager vide\" → {\"term\": {\"managerName.keyword\": \"\"}}\n";
+        $queryInstructions .= "   - \"sans client\", \"pas de client\", \"client vide\" → {\"term\": {\"clientName.keyword\": \"\"}}\n";
+        $queryInstructions .= "   - \"sans agence\", \"pas d'agence\", \"agence vide\" → {\"term\": {\"agencyName.keyword\": \"\"}}\n";
+        $queryInstructions .= "   - En général: \"sans [CHAMP]\" = champ vide (\"\"), PAS champ inexistant\n";
+        $queryInstructions .= "   - NE PAS utiliser {\"must_not\": {\"exists\": {\"field\": \"xxx\"}}} pour les champs métier\n\n";
+
+        $queryInstructions .= "4. EXEMPLES DE REQUÊTES:\n";
+
+        $queryInstructions .= "4. EXEMPLES DE REQUÊTES:\n";
         $queryInstructions .= "   RECHERCHE PAR ID:\n";
         $queryInstructions .= "   {\n";
         $queryInstructions .= "     \"query\": { \"term\": { \"id\": 869 }},\n";

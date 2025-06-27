@@ -3,10 +3,10 @@
 namespace App\Command;
 
 use App\Dto\ClientCaseDto;
+use App\Service\Elasticsearch\ElasticsearchIndexerService;
+use App\Service\Elasticsearch\StreamingDataFetcher;
 use App\Service\ElasticsearchSearchService;
-use Doctrine\ORM\EntityManagerInterface;
 use Exception;
-use JoliCode\Elastically\Client;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -21,233 +21,168 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 class ElasticsearchCommand extends Command
 {
     public function __construct(
-        private readonly Client $elasticClient,
-        private readonly EntityManagerInterface $entityManager,
+        private readonly StreamingDataFetcher $streamingDataFetcher,
         private readonly ElasticsearchSearchService $elasticsearchSearchService,
+        private readonly ElasticsearchIndexerService $elasticsearchIndexerService
     ) {
         parent::__construct();
     }
 
     protected function configure(): void
     {
-        $this->addOption('limit', null, InputOption::VALUE_OPTIONAL, 'Limit number of records', 100);
-        $this->addOption('action', null, InputOption::VALUE_REQUIRED, 'action to execute', 100);
+        $this
+            ->addOption('limit', null, InputOption::VALUE_OPTIONAL, 'Limit number of records', 1)
+            ->addOption('action', null, InputOption::VALUE_REQUIRED, 'action to execute')
+            ->addOption('id', null, InputOption::VALUE_OPTIONAL, 'Specific ClientCase ID to test')
+            ->addOption('start-from-id', null, InputOption::VALUE_OPTIONAL, 'Restart indexing from this client case ID')
+            ->addOption('force', null, InputOption::VALUE_NONE, 'Force action without confirmation');
     }
 
+    /**
+     * @throws Exception
+     */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
         $action = $input->getOption('action');
 
-        if ($action === 'index') {
-            $this->elasticsearchSearchService->createIndex('client_case');
-            $io->success('Index created');
-            return Command::SUCCESS;
-        }
-
-        if ($action === 'delete') {
-            $this->elasticsearchSearchService->deleteIndex('client_case');
-            $io->success('Index deleted');
-            return Command::SUCCESS;
-        }
-
-        if ($action === 'mapping') {
-            return $this->mapping($io);
-        }
-
-        if ($action === 'search') {
-            return $this->search($io);
-        }
-
-        if ($action === 'check-mapping') {
-            return $this->checkMapping($io);
-        }
-
-        $io->error('Action required: --action=check|mapping|search|debug|delete|check-mapping');
-        return Command::FAILURE;
+        return match ($action) {
+            'index' => $this->createIndex($io),
+            'delete' => $this->deleteIndex($io),
+            'es-index-one' => $this->indexSingleClientCase($io, $input),
+            'es-index-all' => $this->indexAllWithResume($io, $input),
+            default => throw new Exception('Invalid action')
+        };
     }
 
-    private function check(SymfonyStyle $io): int
+    public function createIndex(SymfonyStyle $io): int
     {
-        try {
-            $info = $this->elasticClient->info();
-            $io->table(
-                ['Property', 'Value'],
-                [
-                    ['Cluster Name', $info['cluster_name']],
-                    ['Version', $info['version']['number']],
-                    ['Status', '🟢 Connected'],
-                ]
-            );
-
-            return Command::SUCCESS;
-        } catch (Exception $e) {
-            $io->error('Connection failed: ' . $e->getMessage());
-
-            return Command::FAILURE;
-        }
-    }
-
-    private function mapping(SymfonyStyle $io): int
-    {
-        $processed = 0;
-        $clientCasesData = $this->fetchClientCases(5);
-        $io->progressStart(count($clientCasesData));
-
-        foreach ($clientCasesData as $rawData) {
-            $document = ClientCaseDto::fromArray($rawData);
-            $this->elasticClient->index([
-                'index' => 'client_case',
-                'id' => $document->id,
-                'body' => $document->toArray()
-            ]);
-
-            $processed++;
-            $io->progressAdvance();
-        }
-
-        $this->elasticClient->indices()->refresh(['index' => 'client_case']);
-        $io->note(sprintf('Indexed %d ClientCases', $processed));
-
+        $this->elasticsearchSearchService->createIndex('client_case');
+        $io->success('Index created');
         return Command::SUCCESS;
     }
 
-    private function search(SymfonyStyle $io): int
+    public function deleteIndex(SymfonyStyle $io): int
+    {
+        $this->elasticsearchSearchService->deleteIndex('client_case');
+        $io->success('Index deleted');
+        return Command::SUCCESS;
+    }
+
+    public function indexSingleClientCase(SymfonyStyle $io, InputInterface $input): int
     {
         try {
-            // Search in multiple fields
-            $searchParams = [
-                'index' => 'client_case',
-                'body' => [
-                    'query' => [
-                        'multi_match' => [
-                            'query' => '94P0242305',
-                            'fields' => [
-                                'reference^3',      // Boost reference matches
-                                'project_name^2',   // Boost project name matches
-                                'clientName',
-                                'agencyName',
-                                'managerName'
-                            ],
-                            'type' => 'best_fields',
-                            'fuzziness' => 'AUTO'
-                        ]
-                    ],
-                    'size' => 10
-                ]
-            ];
-            $response = $this->elasticClient->search($searchParams);
-            $hits = $response['hits'];
-            $total = $hits['total']['value'];
+            ini_set('memory_limit', '-1');
+            $clientCaseId = $input->getOption('id');
 
-            if ($total === 0) {
-                $io->warning('No results found');
-                return Command::SUCCESS;
+            if (!$clientCaseId) {
+                throw new Exception('Client Case ID is required');
             }
 
-            $io->success(sprintf('Found %d result(s)', $total));
+            $this->elasticsearchIndexerService->indexSingleClientCase($clientCaseId);
+            $io->success(sprintf("Index with success clientCase : %d", $clientCaseId));
             return Command::SUCCESS;
         } catch (Exception $e) {
-            $io->error('Search failed: ' . $e->getMessage());
+            $io->error($e->getMessage());
             return Command::FAILURE;
         }
     }
 
-    private function fetchClientCases(int $limit): array
+    private function indexAllWithResume(SymfonyStyle $io, InputInterface $input): int
     {
-        $connection = $this->entityManager->getConnection();
+        $io->title('🚀 Start to index all client case with resume');
 
-        $sql = "
-            SELECT 
-                cc.id,
-                cc.reference,
-                cc.project_name,
-                a.name as agency_name,
-                c.company_name as client_name,
-                ccs.name as status_name,
-                CONCAT(COALESCE(col.firstname, ''), ' ', COALESCE(col.lastname, '')) as manager_name
-            FROM client_case cc
-            LEFT JOIN agency a ON cc.agency_id = a.id
-            LEFT JOIN client c ON cc.client_id = c.id
-            LEFT JOIN client_case_status ccs ON cc.client_case_status_id = ccs.id
-            LEFT JOIN collaborator col ON cc.manager_id = col.id
-            WHERE cc.deleted_at IS NULL
-            ORDER BY cc.id DESC
-            LIMIT {$limit}
-        ";
+        $startFromId = $input->getOption('start-from-id');
 
-        $statement = $connection->prepare($sql);
+        try {
+            $results = $this->elasticsearchIndexerService->indexAllClientCases($io, $startFromId);
 
-        $result = $statement->executeQuery();
+            if ($results['total_errors'] === 0) {
+                $io->success('✅ Indexation terminée avec succès !');
+            } else {
+                $io->warning("⚠️ Indexation terminée avec {$results['total_errors']} erreur(s).");
+            }
 
-        return $result->fetchAllAssociative();
+            return $results['total_errors'] > 0 ? Command::FAILURE : Command::SUCCESS;
+        } catch (Exception $e) {
+            $io->error('❌ Erreur: ' . $e->getMessage());
+            return Command::FAILURE;
+        }
     }
 
-    private function checkMapping(SymfonyStyle $io): int
+    /**
+     * Test Build DTO
+     */
+    private function testSingleClientCaseStreaming(SymfonyStyle $io, InputInterface $input): int
     {
+        ini_set('memory_limit', '-1');
+        $io->title('🧪 Test Streaming - 1 ClientCase');
+
+        // Utiliser l'ID fourni ou 869 par défaut
+        $clientCaseId = $input->getOption('id') ?? 1315;
+        $io->section("🎯 Test du ClientCase ID: {$clientCaseId}");
+
+        $startTime = microtime(true);
+        $memoryBefore = memory_get_usage(true);
+        $riskAnalysis = $this->streamingDataFetcher->analyzeClientCaseRisk($clientCaseId);
+        $io->table(['Analyse préalable', 'Valeur'], [
+            ['Nombre de reports', $riskAnalysis['stats']['reports_count']],
+            ['Total reviews', $riskAnalysis['stats']['total_reviews']],
+            ['Max reviews/report', $riskAnalysis['stats']['max_reviews_per_report']],
+            ['Niveau de risque', $riskAnalysis['risk_level']]
+        ]);
+
+        $startTime = microtime(true);
+        $memoryBefore = memory_get_usage(true);
+        $peakMemory = $memoryBefore;
+
         try {
-            $io->section('🔍 Vérification du mapping pour l\'index "client_case"');
+            $clientCase = $this->streamingDataFetcher->fetchClientCaseComplete($clientCaseId);
+            $peakMemory = memory_get_peak_usage(true);
 
-            // 1. Vérifier si l'index existe
-            $indexExists = $this->elasticClient->indices()->exists(['index' => 'client_case']);
+            $executionTime = round((microtime(true) - $startTime) * 1000, 2);
+            $memoryAfter = memory_get_usage(true);
+            $memoryUsed = round(($memoryAfter - $memoryBefore) / 1024 / 1024, 2);
+            $peakMemoryMB = round($peakMemory / 1024 / 1024, 2);
 
-            if (!$indexExists) {
-                $io->error('❌ L\'index "client_case" n\'existe pas');
+            if (!$clientCase) {
+                $io->error("❌ ClientCase {$clientCaseId} non trouvé");
                 return Command::FAILURE;
             }
 
-            $io->success('✅ Index "client_case" existe');
+            $reportsCount = count($clientCase['reports'] ?? []);
+            $totalReviews = array_sum(array_map(fn($r) => count($r['reviews'] ?? []), $clientCase['reports'] ?? []));
 
-            // 2. Récupérer le mapping
-            $mappingResponse = $this->elasticClient->indices()->getMapping(['index' => 'client_case']);
-            $mapping = $mappingResponse->asArray();
+            // Calculer la taille moyenne d'un avis
+            $avgReviewSize = $totalReviews > 0 ? round(($memoryUsed * 1024 * 1024) / $totalReviews, 0) : 0;
 
-            $properties = [];
+            $io->section('📊 Résultats du test');
+            $io->table(['Métrique', 'Valeur'], [
+                ['ClientCase ID', $clientCase['id']],
+                ['Référence', $clientCase['reference']],
+                ['Nombre de Reports', number_format($reportsCount)],
+                ['Nombre total de Reviews', number_format($totalReviews)],
+                ['Temps d\'exécution', $executionTime . ' ms'],
+                ['Mémoire utilisée', $memoryUsed . ' MB'],
+                ['Pic mémoire', $peakMemoryMB . ' MB'],
+                ['Mémoire limite PHP', ini_get('memory_limit')],
+                ['Taille moy./avis', $avgReviewSize . ' bytes'],
+                ['Mode traitement', $clientCase['_mode'] ?? 'COMPLETE']
+            ]);
 
-            foreach ($mapping as $indexName => $indexData) {
-                if (isset($indexData['mappings']['properties'])) {
-                    $properties = $indexData['mappings']['properties'];
-                    break;
-                }
+            // Proposer de voir les données brutes
+            if ($io->confirm('Voulez-vous voir la structure complète ?', false)) {
+                $io->section('🗃️ Structure complète du ClientCase');
+                $dto = ClientCaseDto::fromStreamingData($clientCase);
+                $document = $dto->toElasticsearchDocument();
+                dd($document);
             }
 
-            if (empty($properties)) {
-                $io->warning('⚠️ Aucune propriété trouvée dans le mapping');
-                return Command::SUCCESS;
-            }
-
-            // Afficher le mapping sous forme de tableau
-            $tableData = [];
-            foreach ($properties as $fieldName => $fieldConfig) {
-                $type = $fieldConfig['type'] ?? 'unknown';
-                $analyzer = $fieldConfig['analyzer'] ?? 'N/A';
-                $fields = '';
-
-                // Vérifier s'il y a des sous-champs
-                if (isset($fieldConfig['fields'])) {
-                    $subFields = [];
-                    foreach ($fieldConfig['fields'] as $subFieldName => $subFieldConfig) {
-                        $subFields[] = $subFieldName . ' (' . ($subFieldConfig['type'] ?? 'unknown') . ')';
-                    }
-                    $fields = implode(', ', $subFields);
-                }
-
-                $tableData[] = [
-                    $fieldName,
-                    $type,
-                    $analyzer,
-                    $fields ?: 'Aucun'
-                ];
-            }
-
-            $io->table(
-                ['Champ', 'Type', 'Analyzer', 'Sous-champs'],
-                $tableData
-            );
-
+            $io->success('✅ Test build DTO !');
             return Command::SUCCESS;
-        } catch (\Exception $e) {
-            $io->error('❌ Erreur lors de la vérification du mapping: ' . $e->getMessage());
+        } catch (Exception $exception) {
+            $io->error('❌ Erreur pendant le test: ' . $exception->getMessage());
+            $io->note('Stack trace: ' . $exception->getTraceAsString());
             return Command::FAILURE;
         }
     }

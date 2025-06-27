@@ -42,14 +42,16 @@ class ChatbotTestCommand extends Command
         // Combien y a-t-il d'affaires ?
         // Combien d'affaires au total ?
         // Liste des managers
-        // Liste des agences
         // Quelles sont les différentes agences ?
         // Quel est le projet de l'affaire 869 ?
         // Qui gère l'affaire 869 ?
         // Quel est le statut de l'affaire 869 ?
         // Combien d'affaires par client ?
+        // "Combien d'affaires gère chaque manager ?"
+        // "Pour chaque manager, combien d'affaires et combien de rapports au total ?"
+        // "Combien y a-t-il d'affaires sans manager ?";
 
-        $question = "Combien d'affaires par client ?";
+        $question = "Combien y a-t-il d'affaires où le nom du manager est une chaîne vide ?";
         $io->title(sprintf('Question posé : %s', $question));
 
 
@@ -58,8 +60,6 @@ class ChatbotTestCommand extends Command
 
         // 1. Test du schema
         $schema = $this->elasticsearchSchemaService->getMappingsStructure();
-        $io->section('1. Schema récupéré:');
-        $io->text(json_encode($schema, JSON_PRETTY_PRINT));
 
         // 2. Test de génération LLM
         $queryBody = $this->elasticsearchGeneratorService->generateQueryBody($question, $schema, $intent);
