@@ -1,3 +1,12 @@
+settings:
+  analysis:
+    normalizer:
+      lowercase_normalizer:
+        type: custom
+        char_filter: []
+        filter:
+          - lowercase
+          - asciifolding  # Supprime les accents
 mappings:
   dynamic: false
   properties:
@@ -11,23 +20,39 @@ mappings:
       fields:
         keyword:
           type: keyword  # Pour tri et filtre exact
+        normalized:
+          type: keyword
+          normalizer: lowercase_normalizer
     agencyName:
       type: text
       analyzer: french
       fields:
         keyword:
           type: keyword
+        normalized:
+          type: keyword
+          normalizer: lowercase_normalizer
     clientName:
       type: text
       analyzer: french
       fields:
         keyword:
           type: keyword
+        normalized:
+          type: keyword
+          normalizer: lowercase_normalizer
     statusName:
       type: keyword  # Status = filtre exact
+      fields:
+        normalized:
+          type: keyword
+          normalizer: lowercase_normalizer
     managerName:
       type: text
       analyzer: french
       fields:
         keyword:
           type: keyword
+        normalized:
+          type: keyword
+          normalizer: lowercase_normalizer

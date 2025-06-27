@@ -13,7 +13,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use JoliCode\Elastically\IndexBuilder;
 
 #[AsCommand(
     name: 'app:es',
@@ -43,8 +42,6 @@ class ElasticsearchCommand extends Command
         if ($action === 'index') {
             $this->elasticsearchSearchService->createIndex('client_case');
             $io->success('Index created');
-
-            $mapping = $this->elasticClient->indices()->getMapping(['index' => 'client_case']);
             return Command::SUCCESS;
         }
 
@@ -89,40 +86,6 @@ class ElasticsearchCommand extends Command
 
             return Command::FAILURE;
         }
-    }
-
-    private function debug(SymfonyStyle $io): int
-    {
-        // 1. Voir tous les documents
-        $allDocs = $this->elasticClient->search([
-            'index' => 'client_case',
-            'body' => ['query' => ['match_all' => new \stdClass()], 'size' => 10]
-        ]);
-
-        $io->section('📋 Documents indexés:');
-        foreach ($allDocs['hits']['hits'] as $doc) {
-            $io->writeln('ID: ' . $doc['_source']['id'] . ' | Ref: "' . $doc['_source']['reference'] . '"');
-        }
-
-        // 2. Test term avec une référence qui existe
-        $termSearch = $this->elasticClient->search([
-            'index' => 'client_case',
-            'body' => ['query' => ['term' => ['reference' => '94P0242305']]]
-        ]);
-
-        $io->section('🔍 Recherche term "94P0242305":');
-        $io->writeln('Résultats: ' . $termSearch['hits']['total']['value']);
-
-        // 3. Test match avec la même référence
-        $matchSearch = $this->elasticClient->search([
-            'index' => 'client_case',
-            'body' => ['query' => ['match' => ['reference' => '94P0242305']]]
-        ]);
-
-        $io->section('🔍 Recherche match "94P0242305":');
-        $io->writeln('Résultats: ' . $matchSearch['hits']['total']['value']);
-
-        return Command::SUCCESS;
     }
 
     private function mapping(SymfonyStyle $io): int
@@ -183,8 +146,6 @@ class ElasticsearchCommand extends Command
             }
 
             $io->success(sprintf('Found %d result(s)', $total));
-            dd($hits);
-
             return Command::SUCCESS;
         } catch (Exception $e) {
             $io->error('Search failed: ' . $e->getMessage());
