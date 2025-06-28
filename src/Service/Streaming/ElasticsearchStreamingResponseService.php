@@ -10,6 +10,7 @@ use App\Service\Elasticsearch\ElasticsearchSchemaService;
 use App\Service\Elasticsearch\ElasticsearchSecurityService;
 use App\Service\LLM\HumanResponseService;
 use App\Service\LLM\IntentService;
+use App\Service\QueryProcessor;
 use Exception;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Response;
@@ -32,6 +33,7 @@ readonly class ElasticsearchStreamingResponseService
         private ReportArchiveService            $reportArchiveService,
         private ServerSentEventService          $sseService,
         private LoggerInterface                 $logger,
+        private QueryProcessor                  $queryProcessor
     ) {}
 
     public function createStreamingResponse(string $question): StreamedResponse
@@ -52,7 +54,7 @@ readonly class ElasticsearchStreamingResponseService
             $this->streamLlmResponse(
                 $question,
                 $streamingData['results'],
-                $streamingData['query'], // Query ES au lieu de SQL
+                $streamingData['query'],
                 $streamingData['intent']
             );
 
@@ -79,19 +81,22 @@ readonly class ElasticsearchStreamingResponseService
      */
     private function prepareElasticsearchData(string $question): array
     {
-        // Step 0: Classify user intent
-        $intent = $this->intentService->classify($question);
+        // Step 0: Normalize question
+        $normalizedQuestion = $this->queryProcessor->normalizeQuestion($question);
 
-        // Step 1: Get Elasticsearch schema
+        // Step 1: Classify user intent
+        $intent = $this->intentService->classify($normalizedQuestion);
+
+        // Step 2: Get Elasticsearch schema
         $schema = $this->elasticsearchSchemaService->getMappingsStructure();
 
-        // Step 2: Generate ES query using LLM
-        $queryBody = $this->elasticsearchGeneratorService->generateQueryBody($question, $schema, $intent);
+        // Step 3: Generate ES query using LLM
+        $queryBody = $this->elasticsearchGeneratorService->generateQueryBody($normalizedQuestion, $schema, $intent);
 
-        // Step 3: Validate ES query for security
+        // Step 4: Validate ES query for security
         $validatedQuery = $this->elasticsearchSecurityService->validateQuery($queryBody);
 
-        // Step 4: Execute the query
+        // Step 5: Execute the query
         $results = $this->elasticsearchExecutorService->executeQuery($validatedQuery);
 
         return [
