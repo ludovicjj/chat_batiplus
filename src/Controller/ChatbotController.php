@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Exception\ValidatorException;
 use App\RequestHandler\Chatbot\Ask\RequestHandler;
 use App\Service\Chatbot\ChatbotService;
+use App\Service\Streaming\ElasticsearchStreamingResponseService;
 use App\Service\Streaming\StreamingResponseService;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -62,11 +63,22 @@ class ChatbotController extends AbstractController
     public function askStream(
         Request $request,
         RequestHandler $requestHandler,
-        StreamingResponseService $streamingResponseService
+        ElasticsearchStreamingResponseService $streamingResponseService // ES
+//        StreamingResponseService $streamingResponseService // SQL
     ): Response {
-        // Peux-tu me donner tous les rapports ?
-        // Peux tu me donner des informations sur le collaborateur  ?
-        // Peux tu me donner le nom des différentes agences ?
+        // Combien y a-t-il d'affaires ?
+        // Combien d'affaires au total ?
+        // Liste des managers
+
+
+        // "Combien d'affaires par client ?";
+        // "Combien d'affaires gère chaque manager ?";
+        // "Pour chaque manager, combien d'affaires et combien de rapports au total ?"
+        // "Combien y a-t-il d'affaires sans manager ?";
+        // "Combien y a-t-il d'affaires où le nom du manager est une chaîne vide ?";
+
+        // DOWNLOAD
+        // "Je veux télécharger les fichiers de Philippe KURAS";
         $result = $requestHandler->handle($request);
         return $streamingResponseService->createStreamingResponse($result['question']);
     }

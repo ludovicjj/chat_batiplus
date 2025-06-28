@@ -48,8 +48,6 @@ class ElasticsearchGeneratorService extends AbstractLLMService
         $queryInstructions .= "   - NE PAS utiliser {\"must_not\": {\"exists\": {\"field\": \"xxx\"}}} pour les champs métier\n\n";
 
         $queryInstructions .= "4. EXEMPLES DE REQUÊTES:\n";
-
-        $queryInstructions .= "4. EXEMPLES DE REQUÊTES:\n";
         $queryInstructions .= "   RECHERCHE PAR ID:\n";
         $queryInstructions .= "   {\n";
         $queryInstructions .= "     \"query\": { \"term\": { \"id\": 869 }},\n";
@@ -95,7 +93,7 @@ class ElasticsearchGeneratorService extends AbstractLLMService
 
     private function getInfoSpecificInstructions(): string
     {
-        return "4. OPTIMISATION POUR INFO:\n" .
+        return "5. OPTIMISATION POUR INFO:\n" .
             "   - Utiliser size: 0 pour les comptages\n" .
             "   - Utiliser aggregations pour les statistiques\n" .
             "   - Limiter les champs retournés avec _source si nécessaire\n" .
@@ -104,12 +102,47 @@ class ElasticsearchGeneratorService extends AbstractLLMService
 
     private function getDownloadSpecificInstructions(): string
     {
-        return "4. OPTIMISATION POUR TÉLÉCHARGEMENT:\n" .
-            "   - OBLIGATOIRE: inclure les champs id, reference, reports.id, reports.filename\n" .
-            "   - Utiliser _source pour sélectionner les champs nécessaires\n" .
-            "   - Limiter à 50 résultats maximum\n" .
-            "   - Filtrer sur reports.imported: true pour les fichiers disponibles\n" .
-            "   - Exemple _source: [\"id\", \"reference\", \"reports.id\", \"reports.filename\", \"reports.reference\"]\n\n";
+        return "5. OPTIMISATION POUR TÉLÉCHARGEMENT:\n" .
+            "   - SIMPLE: Récupérer uniquement reports.s3Path\n" .
+            "   - _source: [\"reports.s3Path\"] suffit pour le téléchargement\n" .
+            "   - LIMITE PRAGMATIQUE: Éviter les téléchargements massifs (>100 fichiers)\n" .
+            "   - RÈGLE SIMPLE: Une affaire = environ 5-15 fichiers en moyenne\n" .
+            "   - CALCUL CONSERVATEUR: size: 8 pour rester sous 100 fichiers (~8×12=96)\n" .
+            "   - EXCEPTION: Si affaire unique (recherche par référence), pas de limite\n" .
+            "   - PAS de filtre sur imported: tous les rapports sont téléchargeables\n" .
+            "   - Le service utilisera directement les chemins S3\n\n" .
+
+            "   RÈGLES DE LIMITATION:\n" .
+            "   - Recherche par AFFAIRE SPÉCIFIQUE (référence): pas de limite (1 seule affaire)\n" .
+            "   - Recherche par MANAGER/CLIENT: size: 8 (estimation: 8×12≈100 fichiers max)\n" .
+            "   - Recherche LARGE (range, multi-critères): size: 5 (très prudent)\n" .
+            "   - TOUJOURS préciser dans un commentaire le nombre d'affaires limitées\n\n" .
+
+            "   EXEMPLES DE REQUÊTES TÉLÉCHARGEMENT:\n" .
+            "   Pour une affaire spécifique (pas de limite):\n" .
+            "   {\n" .
+            "     \"query\": {\"term\": {\"reference\": \"[REFERENCE_AFFAIRE]\"}},\n" .
+            "     \"_source\": [\"reports.s3Path\"]\n" .
+            "   }\n\n" .
+
+            "   Pour un manager (limite conservative):\n" .
+            "   {\n" .
+            "     \"query\": {\"term\": {\"managerName.keyword\": \"[NOM_MANAGER]\"}},\n" .
+            "     \"_source\": [\"reports.s3Path\"],\n" .
+            "     \"size\": 8\n" .
+            "   }\n\n" .
+
+            "   Pour plusieurs affaires (limite stricte):\n" .
+            "   {\n" .
+            "     \"query\": {\"range\": {\"totalReports\": {\"gt\": 5}}},\n" .
+            "     \"_source\": [\"reports.s3Path\"],\n" .
+            "     \"size\": 5\n" .
+            "   }\n\n" .
+
+            "   AVERTISSEMENT À INCLURE:\n" .
+            "   - Toujours préciser dans la réponse le nombre estimé de fichiers\n" .
+            "   - Suggérer de préciser la recherche si trop de résultats\n" .
+            "   - Mentionner la possibilité de filtrer par date ou référence\n\n";
     }
 
     private function extractJsonFromResponse(string $response): array

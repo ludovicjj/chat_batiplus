@@ -50,6 +50,7 @@ readonly class ServerSentEventService
     public function sendDownloadReady(array $downloadData): void
     {
         $this->sendEvent('download_ready', ['download' => $downloadData]);
+        $this->addVisualDelay();
     }
 
     /**

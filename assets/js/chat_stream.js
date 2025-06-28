@@ -372,7 +372,11 @@ class ChatBotStream {
                             <strong>Archive prête !</strong>
                         </div>
                         <small class="text-muted">
-                            ${downloadInfo.file_count} fichiers • ${downloadInfo.estimated_size}
+                            ${downloadInfo.file_count} fichiers • ${downloadInfo.estimated_size}<br>
+                            ${downloadInfo.error_count > 0 ?
+                                `⚠️ ${downloadInfo.error_count} fichier(s) non trouvé(s)` :
+                                '✅ Tous les fichiers récupérés'
+                            }
                         </small>
                     </div>
                     <a href="${downloadInfo.download_url}" 
@@ -380,6 +384,27 @@ class ChatBotStream {
                        download>
                         <i class="fas fa-download me-1"></i>Télécharger
                     </a>
+                </div>
+                
+                <div>
+                    ${downloadInfo.error_count > 0 ? `
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-light" type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#errorDetails" 
+                                        aria-expanded="false">
+                                    Voir les erreurs
+                                </button>
+                                <div class="collapse mt-2" id="errorDetails">
+                                    <div class="alert alert-light alert-sm">
+                                        <strong>Fichiers non trouvés :</strong>
+                                        <ul class="mb-0 mt-1" style="font-size: 0.85em;">
+                                            ${downloadInfo.error_messages.map(error => `<li>${error}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
                 </div>
             </div>
         `;

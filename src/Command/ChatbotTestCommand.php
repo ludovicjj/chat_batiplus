@@ -39,25 +39,14 @@ class ChatbotTestCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
         $io->title('ChatBot BatiPlus - Test des composants');
-        // Combien y a-t-il d'affaires ?
-        // Combien d'affaires au total ?
-        // Liste des managers
-        // Quelles sont les différentes agences ?
-        // Quel est le projet de l'affaire 869 ?
-        // Qui gère l'affaire 869 ?
-        // Quel est le statut de l'affaire 869 ?
-        // Combien d'affaires par client ?
-        // "Combien d'affaires gère chaque manager ?"
-        // "Pour chaque manager, combien d'affaires et combien de rapports au total ?"
-        // "Combien y a-t-il d'affaires sans manager ?";
 
-        $question = "Combien y a-t-il d'affaires où le nom du manager est une chaîne vide ?";
+        $question = "Combien y a-t-il d'affaires ?";
         $io->title(sprintf('Question posé : %s', $question));
 
 
         // Step 0: Classify user intent
         $intent = $this->intentService->classify($question);
-
+        $io->text('MODE : ' . $intent);
         // 1. Test du schema
         $schema = $this->elasticsearchSchemaService->getMappingsStructure();
 
