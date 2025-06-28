@@ -4,10 +4,10 @@ namespace App\Service\Elasticsearch;
 
 use JoliCode\Elastically\Client;
 
-class ElasticsearchSchemaService
+readonly class ElasticsearchSchemaService
 {
     public function __construct(
-        private readonly Client $elasticClient,
+        private Client $elasticClient,
     ) {}
 
     public function getMappingsStructure(): array
@@ -56,6 +56,16 @@ class ElasticsearchSchemaService
         switch ($type) {
             case 'keyword':
                 $description = "exact match, filtering, aggregations";
+                $additionalFields = [];
+                if (isset($fieldConfig['fields']['keyword'])) {
+                    $additionalFields[] = ".keyword for exact match";
+                }
+                if (isset($fieldConfig['fields']['normalized'])) {
+                    $additionalFields[] = ".normalized for case-insensitive search";
+                }
+                if (!empty($additionalFields)) {
+                    $description .= " (has " . implode(', ', $additionalFields) . ")";
+                }
                 break;
             case 'text':
                 $description = "full-text search, analyzed";
@@ -91,36 +101,60 @@ class ElasticsearchSchemaService
     {
         return [
             'client_case' => [
-                'id (integer) - unique identifier',
-                'reference (keyword) - exact client case reference',
-                'short_reference (keyword) - short reference code',
-                'projectName (text) - project name, full-text searchable',
-                'clientName (text) - client name, full-text searchable',
-                'agencyName (text) - agency name, full-text searchable',
-                'managerEmail (keyword) - manager email for exact filtering',
-                'managerName (text) - manager name, full-text searchable',
-                'statusName (keyword) - status for exact filtering',
-                'phase (keyword) - project phase (conception, réalisation, etc.)',
-                'createdAt (date) - creation date',
-                'updatedAt (date) - last update date',
-                'deletedAt (date) - deletion date (null if not deleted)',
-                'isEnabled (boolean) - active status',
-                'reports (nested) - nested reports array with:',
-                '  reports.id (integer) - report ID',
-                '  reports.filename (keyword) - report filename',
-                '  reports.reference (keyword) - report reference',
-                '  reports.imported (boolean) - import status',
-                '  reports.createdAt (date) - report creation date',
-                '  reports.avis (nested) - nested avis array with:',
-                '    reports.avis.id (integer) - avis ID',
-                '    reports.avis.content (text) - avis content',
-                '    reports.avis.rating (keyword) - rating (A, B, C, D)',
-                '    reports.avis.userName (text) - user name',
-                '    reports.avis.createdAt (date) - avis creation date',
-                'totalReports (integer) - computed total reports count',
-                'totalAvis (integer) - computed total avis count',
+                // === IDENTIFIANTS ET RÉFÉRENCES AFFAIRE ===
+                'caseId (integer) - unique identifier of the case',
+                'caseReference (keyword) - exact case reference (ex: 94P0237518)',
+                'caseShortReference (keyword) - short reference code',
+
+                // === INFORMATIONS AFFAIRE ===
+                'caseTitle (text + .keyword + .normalized) - case title/description, full-text searchable',
+                'caseClient (text + .keyword + .normalized) - client name, full-text searchable',
+                'caseAgency (text + .keyword + .normalized) - agency name, full-text searchable',
+                'caseManager (text + .keyword + .normalized) - manager name, full-text searchable',
+                'caseStatus (keyword + .normalized) - status for exact filtering',
+
+                // === MÉTRIQUES CALCULÉES ===
+                'reportsCount (integer) - computed total reports count',
+                'reviewsCount (integer) - computed total reviews count',
                 'hasReports (boolean) - has reports flag',
-                'hasAvis (boolean) - has avis flag'
+                'hasReviews (boolean) - has reviews flag',
+                'hasObservations (boolean) - has observations flag',
+
+                // === RECHERCHE GLOBALE ===
+                'searchableText (text + .suggest) - global searchable text field',
+
+                // === FACETTES ===
+                'reportTypes (keyword) - array of report types present',
+                'reviewValues (keyword) - array of review values present',
+                'reviewGroups (keyword) - array of review domains present',
+
+                // === STRUCTURE HIÉRARCHIQUE DES RAPPORTS ===
+                'reports (nested) - nested reports array with:',
+                '  reports.reportId (integer) - report ID',
+                '  reports.reportReference (keyword + .normalized) - report reference (ex: AD-001)',
+                '  reports.reportImported (boolean) - import status',
+                '  reports.reportIsDraft (boolean) - draft status',
+                '  reports.reportIsValidated (boolean) - validation status',
+                '  reports.reportCreatedAt (date) - report creation date',
+                '  reports.reportValidatedAt (date) - report validation date',
+                '  reports.reportTypeName (text + .keyword + .normalized) - report type name',
+                '  reports.reportTypeCode (keyword) - report type code',
+                '  reports.reportS3Path (keyword) - S3 storage path',
+                '  reports.reportReviewsCount (integer) - number of reviews in report',
+                '  reports.reportHasReviews (boolean) - has reviews flag',
+
+                // === STRUCTURE DES AVIS (nested dans reports) ===
+                '  reports.reportReviews (nested) - nested reviews array with:',
+                '    reports.reportReviews.reviewId (integer) - review ID',
+                '    reports.reportReviews.reviewNumber (keyword) - review number',
+                '    reports.reportReviews.reviewObservation (text + .keyword) - review observation content',
+                '    reports.reportReviews.reviewCreatedBy (text + .keyword) - reviewer name',
+                '    reports.reportReviews.reviewPosition (integer) - review position',
+                '    reports.reportReviews.reviewVisitedAt (date) - visit date',
+                '    reports.reportReviews.reviewCreatedAt (date) - review creation date',
+                '    reports.reportReviews.reviewDomain (keyword + .normalized) - review domain (ex: Portes, SSI)',
+                '    reports.reportReviews.reviewValueCode (keyword + .normalized) - review value code (F, D, S, PM)',
+                '    reports.reportReviews.reviewValueName (keyword + .normalized) - review value name (Favorable, Défavorable, Suspendu)',
             ]
         ];
     }

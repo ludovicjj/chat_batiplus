@@ -42,7 +42,7 @@ class ElasticsearchIndexerService
                 $currentId = $clientCaseData['id'] ?? 0;
 
                 // Resume index to startFromId
-                if ($startFromId && $currentId <= $startFromId) {
+                if ($startFromId && $currentId < $startFromId) {
                     continue;
                 }
 
@@ -53,7 +53,7 @@ class ElasticsearchIndexerService
                     // Index Document
                     $this->elasticClient->index([
                         'index' => 'client_case',
-                        'id' => $document['id'],
+                        'id' => $document['caseId'],
                         'body' => $document
                     ]);
 
@@ -152,7 +152,7 @@ class ElasticsearchIndexerService
     {
         $params = [
             'index' => 'client_case',
-            'id' => $document['id'],
+            'id' => $document['caseId'],
             'body' => $document
         ];
 

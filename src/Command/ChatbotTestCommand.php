@@ -40,7 +40,8 @@ class ChatbotTestCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $io->title('ChatBot BatiPlus - Test des composants');
 
-        $question = "Combien y a-t-il d'affaires ?";
+        $question = "peux tu me donner des informations sur les rapports dans l'affaire 94P0237518 dont le manager est Patrick Trouvé ?";
+        //$question = "peux tu me donner des informations sur les rapports dans l'affaire ayant pour id 702";
         $io->title(sprintf('Question posé : %s', $question));
 
 
@@ -49,6 +50,8 @@ class ChatbotTestCommand extends Command
         $io->text('MODE : ' . $intent);
         // 1. Test du schema
         $schema = $this->elasticsearchSchemaService->getMappingsStructure();
+
+        $io->text(json_encode($schema, JSON_PRETTY_PRINT));
 
         // 2. Test de génération LLM
         $queryBody = $this->elasticsearchGeneratorService->generateQueryBody($question, $schema, $intent);

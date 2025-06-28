@@ -78,6 +78,7 @@ class ElasticsearchCommand extends Command
             if (!$clientCaseId) {
                 throw new Exception('Client Case ID is required');
             }
+            // Test with #1360 (not a lot of data)
 
             $this->elasticsearchIndexerService->indexSingleClientCase($clientCaseId);
             $io->success(sprintf("Index with success clientCase : %d", $clientCaseId));

@@ -175,6 +175,7 @@ readonly class StreamingDataFetcher
                 r.client_case_id,
                 r.is_draft as isDraft,
                 r.created_at as createdAt,
+                r.validated_at as validatedAt,
                 rt.name as reportTypeName,
                 rt.code as reportTypeCode
             FROM report r
@@ -321,7 +322,7 @@ readonly class StreamingDataFetcher
     }
 
     /**
-     * Construction du chemin S3 (votre logique existante)
+     * Build S3 path for Report
      */
     private function buildReportS3Path(array $reportData): string
     {

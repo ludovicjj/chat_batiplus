@@ -68,7 +68,7 @@ class ReportArchiveService
                     foreach ($data['reports'] ?? [] as $report) {
                         try {
                             // 5A. UTILISATION DIRECTE DU S3PATH
-                            $s3Path = $report['s3Path'];
+                            $s3Path = $report['reportS3Path'];
 
                             // 5B. GÉNÉRATION DU NOM DE FICHIER POUR LE ZIP
                             $fileName = $this->generateFileNameFromS3Path($s3Path, $clientCaseId);

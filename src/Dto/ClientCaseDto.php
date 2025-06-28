@@ -35,38 +35,6 @@ readonly class ClientCaseDto
     }
 
     /**
-     * Crée un DTO depuis un array JSON (méthode existante adaptée)
-     */
-    public static function fromArray(array $data): self
-    {
-        $reports = [];
-        if (!empty($data['reports'])) {
-            if (is_string($data['reports'])) {
-                // Si c'est du JSON string
-                $reportsJson = json_decode($data['reports'], true);
-                if (is_array($reportsJson)) {
-                    $reports = array_filter($reportsJson, fn($report) => $report !== null);
-                }
-            } elseif (is_array($data['reports'])) {
-                // Si c'est déjà un array
-                $reports = $data['reports'];
-            }
-        }
-
-        return new self(
-            id: (int) $data['id'],
-            reference: $data['reference'] ?? null,
-            shortReference: $data['shortReference'] ?? null,
-            projectName: $data['projectName'] ?? null,
-            agencyName: $data['agencyName'] ?? null,
-            clientName: $data['clientName'] ?? null,
-            statusName: $data['statusName'] ?? null,
-            managerName: $data['managerName'] ?? null,
-            reports: $reports,
-        );
-    }
-
-    /**
      * Convertit en document Elasticsearch optimisé
      */
     public function toElasticsearchDocument(): array
@@ -75,25 +43,26 @@ readonly class ClientCaseDto
         
         return [
             // Identifiants et références
-            'id' => $this->id,
-            'reference' => $this->reference,
-            'shortReference' => $this->shortReference,
+            'caseId' => $this->id,
+            'caseReference' => $this->reference,
+            'caseShortReference' => $this->shortReference,
             
             // Informations générales du dossier
-            'projectName' => $this->projectName,
-            'agencyName' => $this->agencyName,
-            'clientName' => $this->clientName,
-            'statusName' => $this->statusName,
-            'managerName' => $this->managerName,
+            'caseTitle' => $this->projectName,
+            'caseAgency' => $this->agencyName,
+            'caseClient' => $this->clientName,
+            'caseStatus' => $this->statusName,
+            'caseManager' => $this->managerName,
             
             // Structure hiérarchique des rapports
             'reports' => $transformedReports,
             
             // Métriques calculées pour optimiser les requêtes
-            'totalReports' => count($transformedReports),
-            'totalReviews' => $this->countTotalReviews($transformedReports),
+            'reportsCount' => count($transformedReports),
+            'reviewsCount' => $this->countTotalReviews($transformedReports),
             'hasReports' => count($transformedReports) > 0,
             'hasReviews' => $this->countTotalReviews($transformedReports) > 0,
+            'hasObservations' => $this->hasObservations($transformedReports),
             
             // Données textuelles pour la recherche globale
             'searchableText' => $this->buildSearchableText($transformedReports),
@@ -102,7 +71,6 @@ readonly class ClientCaseDto
             'reportTypes' => $this->extractReportTypes($transformedReports),
             'reviewValues' => $this->extractReviewValues($transformedReports),
             'reviewGroups' => $this->extractReviewGroups($transformedReports),
-            'hasObservations' => $this->hasObservations($transformedReports),
         ];
     }
 
@@ -137,21 +105,24 @@ readonly class ClientCaseDto
             $transformedReviews = $this->transformReviews($report['reviews'] ?? []);
             
             return [
-                'id' => (int) $report['id'],
-                'reference' => $report['reference'] ?? null,
-                'filename' => $report['filename'] ?? null,
-                'imported' => (bool) ($report['imported'] ?? false),
-                'isDraft' => (bool) ($report['isDraft'] ?? false),
-                'createdAt' => $this->formatDate($report['createdAt'] ?? null),
+                'reportId' => (int) $report['id'],
+                'reportReference' => $report['reference'] ?? null,
                 'reportTypeName' => $report['reportTypeName'] ?? null,
                 'reportTypeCode' => $report['reportTypeCode'] ?? null,
-                's3Path' => $report['s3Path'] ?? null,
+                'reportS3Path' => $report['s3Path'] ?? null,
+
+                // Report Status
+                'reportImported' => (bool) ($report['imported'] ?? false),
+                'reportIsDraft' => (bool) ($report['isDraft'] ?? false),
+                'reportIsValidated' => !($report['isDraft'] ?? false),
+                'reportCreatedAt' => $this->formatDate($report['createdAt'] ?? null),
+                'reportValidatedAt' => $this->formatDate($report['validatedAt'] ?? null),
                 
                 // Avis du rapport
-                'reviews' => $transformedReviews,
+                'reportReviews' => $transformedReviews,
                 
                 // Métriques par rapport
-                'reviewsCount' => count($transformedReviews),
+                'reportReviewsCount' => count($transformedReviews),
                 'hasReviews' => count($transformedReviews) > 0,
             ];
         }, $this->reports);
@@ -168,19 +139,37 @@ readonly class ClientCaseDto
 
         return array_map(function (array $review) {
             return [
-                'id' => (int) $review['id'],
-                'number' => $review['number'] ?? null,
-                'observation' => $this->cleanHtmlObservation($review['observation'] ?? ''),
-                'visitedAt' => $this->formatDate($review['visitedAt'] ?? null),
-                'createdAt' => $this->formatDate($review['createdAt'] ?? null),
-                'position' => (int) ($review['position'] ?? 0),
-                'createdBy' => $review['createdBy'] ?? null,
-                'reviewGroupId' => $review['reviewGroupId'] ? (int) $review['reviewGroupId'] : null,
-                'reviewGroupName' => $review['reviewGroupName'] ?? null,
-                'reviewValueId' => $review['reviewValueId'] ? (int) $review['reviewValueId'] : null,
-                'reviewValueName' => $review['reviewValueName'] ?? null,
+                'reviewId' => (int) $review['id'],
+                'reviewNumber' => $review['number'] ?? null,
+                'reviewObservation' => $this->cleanHtmlObservation($review['observation'] ?? ''),
+                'reviewCreatedBy' => $review['createdBy'] ?? null,
+                'reviewPosition' => (int) ($review['position'] ?? 0),
+
+                // Date
+                'reviewVisitedAt' => $this->formatDate($review['visitedAt'] ?? null),
+                'reviewCreatedAt' => $this->formatDate($review['createdAt'] ?? null),
+
+                // Classification
+                'reviewDomain' => $review['reviewGroupName'] ?? null,
+                'reviewValueCode' => $review['reviewValueName'] ?? null,
+                'reviewValueName' => $this->decodeReviewValue($review['reviewValueName'])
             ];
         }, $reviews);
+    }
+
+    private function decodeReviewValue(?string $code): ?string
+    {
+        return match($code) {
+            'F' => 'Favorable',
+            'S' => 'Suspendu',
+            'D' => 'Défavorable',
+            'PM' => 'Pour mémoire',
+            'SO' => 'Sans objet',
+            'HM' => 'Hors mission',
+            'C' => 'Conforme',
+            'NC' => 'Non conforme',
+            default => $code
+        };
     }
 
     /**
@@ -228,7 +217,7 @@ readonly class ClientCaseDto
             return 0;
         }
 
-        return array_sum(array_map(fn($report) => count($report['reviews'] ?? []), $reports));
+        return array_sum(array_map(fn($report) => count($report['reportReviews'] ?? []), $reports));
     }
 
     /**
@@ -291,7 +280,7 @@ readonly class ClientCaseDto
 
         $values = [];
         foreach ($reports as $report) {
-            foreach ($report['reviews'] ?? [] as $review) {
+            foreach ($report['reportReviews'] ?? [] as $review) {
                 if (!empty($review['reviewValueName'])) {
                     $values[] = $review['reviewValueName'];
                 }
@@ -312,9 +301,9 @@ readonly class ClientCaseDto
 
         $groups = [];
         foreach ($reports as $report) {
-            foreach ($report['reviews'] ?? [] as $review) {
-                if (!empty($review['reviewGroupName'])) {
-                    $groups[] = $review['reviewGroupName'];
+            foreach ($report['reportReviews'] ?? [] as $review) {
+                if (!empty($review['reviewDomain'])) {
+                    $groups[] = $review['reviewDomain'];
                 }
             }
         }
@@ -332,8 +321,8 @@ readonly class ClientCaseDto
         }
 
         foreach ($reports as $report) {
-            foreach ($report['reviews'] ?? [] as $review) {
-                if (!empty($review['observation'])) {
+            foreach ($report['reportReviews'] ?? [] as $review) {
+                if (!empty($review['reviewObservation'])) {
                     return true;
                 }
             }
