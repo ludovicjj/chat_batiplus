@@ -46,13 +46,15 @@ class HumanResponseService extends AbstractLLMService
      * Generate streaming response from ES query results using LLM
      * @return Generator<string> Yields string chunks
      */
-    public function generateElasticsearchStreamingResponse(string $question, array $results, array $validatedQuery, string $intent): Generator
+    public function generateElasticsearchStreamingResponse(string $question, array $results, string $query, string $intent): Generator
     {
-        if ($intent === IntentService::INTENT_DOWNLOAD) {
+        if ($intent === IntentService::INTENT_CHITCHAT) {
+            yield from $this->generateStreamingChitchatResponse();
+        } elseif ($intent === IntentService::INTENT_DOWNLOAD) {
             yield from $this->generateStreamingDownloadResponseFromES($results);
         } else {
             $systemPrompt = $this->buildSystemPromptForElasticsearchResponse();
-            $userPrompt = $this->buildElasticsearchUserPrompt($question, $results, $validatedQuery);
+            $userPrompt = $this->buildElasticsearchUserPrompt($question, $results, $query);
             // Call LLM with stream mode
             yield from $this->callLlmStreaming($systemPrompt, $userPrompt);
         }
@@ -212,12 +214,12 @@ SYSTEM_PROMPT;
     private function buildElasticsearchUserPrompt(
         string $originalQuestion,
         array $elasticsearchResults,
-        array $validatedQuery
+        string $query
     ): string {
         $prompt = "QUESTION UTILISATEUR: {$originalQuestion}\n\n";
 
         $prompt .= "REQUÊTE ELASTICSEARCH EXÉCUTÉE:\n";
-        $prompt .= json_encode($validatedQuery, JSON_PRETTY_PRINT) . "\n\n";
+        $prompt .= $query . "\n\n";
 
         $prompt .= "RÉSULTATS ELASTICSEARCH:\n";
         $prompt .= "- Total trouvé: " . ($elasticsearchResults['total'] ?? 0) . "\n";
@@ -266,6 +268,16 @@ SYSTEM_PROMPT;
         };
 
         // Simuler le streaming en découpant par mots
+        $words = explode(' ', $response);
+        foreach ($words as $index => $word) {
+            yield $word . ($index < count($words) - 1 ? ' ' : '');
+            usleep(10000); // 50ms entre chaque mot
+        }
+    }
+
+    private function generateStreamingChitchatResponse(): Generator
+    {
+        $response = "Bonjour ! Je vous remercie pour votre message. Je suis conçu spécifiquement pour analyser vos données métier (affaires, rapports, avis) et ne peux pas engager de conversation générale. Comment puis-je vous aider avec vos données professionnelles ?";
         $words = explode(' ', $response);
         foreach ($words as $index => $word) {
             yield $word . ($index < count($words) - 1 ? ' ' : '');

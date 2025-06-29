@@ -8,25 +8,23 @@ use App\Exception\UnsafeSqlException;
 class ElasticsearchSecurityService
 {
     /**
-     * @param array $queryBody
-     * @return array
+     * @param string $queryBody
      * @throws UnsafeElasticsearchQueryException
      */
-    public function validateQuery(array $queryBody): array
+    public function validateQuery(string $queryBody): void
     {
         // Validation basique pour les tests
+        $queryBodyArray = json_decode($queryBody, true);
         $allowedKeys = ['query', 'size', 'from', 'sort', '_source', 'track_total_hits', 'aggs', 'aggregations'];
 
-        foreach (array_keys($queryBody) as $key) {
+        foreach (array_keys($queryBodyArray) as $key) {
             if (!in_array($key, $allowedKeys)) {
                 throw new \InvalidArgumentException("Clé non autorisée: {$key}");
             }
         }
 
         // Validate size limits
-        $this->validateSizeLimits($queryBody);
-
-        return $queryBody;
+        $this->validateSizeLimits($queryBodyArray);
     }
 
     /**

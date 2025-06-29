@@ -14,18 +14,22 @@ class ElasticsearchExecutorService
     {
     }
 
-    public function executeQuery(array $queryBody): array
+    public function executeQuery(string $queryBody): array
     {
         try {
             // Add default timeout if not specified
-            if (!isset($queryBody['timeout'])) {
-                $queryBody['timeout'] = '30s';
-            }
+//            if (!str_contains($queryBody, '"timeout"')) {
+//                // Insérer timeout avant la dernière accolade
+//                $queryBody = rtrim($queryBody, " \n\r\t}") . ',
+//  "timeout": "30s"
+//}';
+//            }
 
             // Execute the query
             $params = [
                 'index' => 'client_case',
-                'body' => $queryBody
+                'body' => $queryBody,
+                'timeout' => '30s'
             ];
 
             $response = $this->elasticClient->search($params);
