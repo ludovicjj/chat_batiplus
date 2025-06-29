@@ -66,19 +66,6 @@ class ChatbotController extends AbstractController
         ElasticsearchStreamingResponseService $streamingResponseService // ES
 //        StreamingResponseService $streamingResponseService // SQL
     ): Response {
-        // Combien y a-t-il d'affaires ?
-        // Combien d'affaires au total ?
-        // Liste des managers
-
-
-        // "Combien d'affaires par client ?";
-        // "Combien d'affaires gère chaque manager ?";
-        // "Pour chaque manager, combien d'affaires et combien de rapports au total ?"
-        // "Combien y a-t-il d'affaires sans manager ?";
-        // "Combien y a-t-il d'affaires où le nom du manager est une chaîne vide ?";
-
-        // DOWNLOAD
-        // "Je veux télécharger les fichiers de Philippe KURAS";
         $result = $requestHandler->handle($request);
         return $streamingResponseService->createStreamingResponse($result['question']);
     }

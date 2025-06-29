@@ -14,11 +14,12 @@ abstract class AbstractLLMService
     private const DATA_PREFIX = 'data: ';
 
     public function __construct(
-        private HttpClientInterface                      $httpClient,
-        #[Autowire('%env(LLM_API_URL)%')] private string $apiUrl,
-        #[Autowire('%env(LLM_API_KEY)%')] private string $apiKey,
-        #[Autowire('%env(LLM_MODEL)%')] private string   $llmModel,
-        private float                                    $temperature = 0.1,
+        private HttpClientInterface                             $httpClient,
+        #[Autowire('%env(LLM_API_URL)%')] private string        $apiUrl,
+        #[Autowire('%env(LLM_API_KEY)%')] private string        $apiKey,
+        #[Autowire('%env(LLM_MODEL)%')] private string          $llmModel,
+        #[Autowire('%kernel.project_dir%')] protected string    $projectDir,
+        private float                                           $temperature = 0.1,
     ) {}
 
     protected function callLlm(string $systemPrompt, string $userPrompt): string
@@ -42,7 +43,7 @@ abstract class AbstractLLMService
                         ]
                     ],
                     'temperature' => $this->temperature,
-                    'reasoning_effort' => 'high'
+                    //'reasoning_effort' => 'high'
                 ],
                 'timeout' => 600,
                 'max_duration' => 600,

@@ -66,7 +66,7 @@ readonly class ElasticsearchStreamingResponseService
 
             $this->sseService->sendFinalComplete();
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->logger->error('Elasticsearch streaming workflow error', [
                 'question' => $question,
                 'error' => $e->getMessage(),
@@ -87,6 +87,15 @@ readonly class ElasticsearchStreamingResponseService
         // Step 1: Classify user intent
         $intent = $this->intentService->classify($normalizedQuestion);
 
+        // Step 1: Handle strange question
+        if ($intent === IntentService::INTENT_CHITCHAT) {
+            return [
+                'intent' => $intent,
+                'query' => '',
+                'results' => [],
+            ];
+        }
+
         // Step 2: Get Elasticsearch schema
         $schema = $this->elasticsearchSchemaService->getMappingsStructure();
 
@@ -94,14 +103,14 @@ readonly class ElasticsearchStreamingResponseService
         $queryBody = $this->elasticsearchGeneratorService->generateQueryBody($normalizedQuestion, $schema, $intent);
 
         // Step 4: Validate ES query for security
-        $validatedQuery = $this->elasticsearchSecurityService->validateQuery($queryBody);
+        $this->elasticsearchSecurityService->validateQuery($queryBody);
 
         // Step 5: Execute the query
-        $results = $this->elasticsearchExecutorService->executeQuery($validatedQuery);
+        $results = $this->elasticsearchExecutorService->executeQuery($queryBody);
 
         return [
             'intent' => $intent,
-            'query' => $validatedQuery,
+            'query' => $queryBody,
             'results' => $results,
         ];
     }
@@ -109,10 +118,10 @@ readonly class ElasticsearchStreamingResponseService
     private function streamLlmResponse(
         string $question,
         array $results,
-        array $validatedQuery,
+        string $queryBody,
         string $intent
     ): void {
-        foreach ($this->humanResponseService->generateElasticsearchStreamingResponse($question, $results, $validatedQuery, $intent) as $chunk) {
+        foreach ($this->humanResponseService->generateElasticsearchStreamingResponse($question, $results, $queryBody, $intent) as $chunk) {
             $this->sseService->sendChunk($chunk);
         }
 
