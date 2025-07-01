@@ -1,0 +1,103 @@
+{
+  "version": "1.0",
+  "description": "Dataset d'exemples pour le système de RAG",
+  "examples": [
+    {
+      "question": "Combien d'affaires au total ?",
+      "query": "{\"query\": {\"match_all\": {}}, \"size\": 0, \"track_total_hits\": true}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "simple",
+        "entity_type": "cases",
+        "operation": "count"
+      },
+      "tags": ["counting", "cases", "total"]
+    },
+    {
+      "question": "Nombre total d'affaires",
+      "query": "{\"query\": {\"match_all\": {}}, \"size\": 0, \"track_total_hits\": true}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "simple",
+        "entity_type": "cases",
+        "operation": "count"
+      },
+      "tags": ["counting", "cases", "total", "nombre"]
+    },
+    {
+      "question": "Affaire avec l'ID 869",
+      "query": "{\"query\": {\"term\": {\"caseId\": 869}}, \"_source\": [\"caseClient\"]}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "simple",
+        "entity_type": "cases",
+        "operation": "search",
+        "filter_type": "id"
+      },
+      "tags": ["search", "cases", "id"]
+    },
+    {
+      "question": "Affaire avec la référence 94P0237518",
+      "query": "{\"query\": {\"term\": {\"caseReference\": \"94P0237518\"}}}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "simple",
+        "entity_type": "cases",
+        "operation": "search",
+        "filter_type": "reference"
+      },
+      "tags": ["search", "cases", "reference"]
+    },
+    {
+      "question": "Affaires pour le manager William BAANNAAA",
+      "query": "{\"query\": {\"term\": {\"caseManager.keyword\": \"William BAANNAAA\"}}, \"size\": 0, \"track_total_hits\": true}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "cases",
+        "operation": "count",
+        "filter_type": "manager"
+      },
+      "tags": ["counting", "cases", "manager"]
+    },
+    {
+      "question": "Peux tu me donner des informations sur les avis dans l'affaire 458AD000254",
+      "query": "{\"query\": {\"bool\": {\"must\": [{\"term\": {\"caseReference\": \"458AD000254\"}}, {\"nested\": {\"path\": \"reports.reviews\", \"query\": {\"exists\": {\"field\": \"reports.reviews\"}}}}]}}, \"_source\": [\"reports.reviews\"]}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "complex",
+        "entity_type": "reviews",
+        "operation": "search",
+        "filter_type": "case_reference",
+        "nested": true
+      },
+      "tags": ["search", "reviews", "nested", "information", "case_specific"]
+    },
+    {
+      "question": "Combien d'avis favorables dans l'affaire ID 123",
+      "query": "{\"query\": {\"bool\": {\"must\": [{\"term\": {\"caseId\": 123}}, {\"nested\": {\"path\": \"reports.reviews\", \"query\": {\"term\": {\"reports.reviews.reviewValueName.keyword\": \"Favorable\"}}}}]}}, \"aggs\": {\"favorable_count\": {\"nested\": {\"path\": \"reports.reviews\"}, \"aggs\": {\"favorable\": {\"filter\": {\"term\": {\"reports.reviews.reviewValueName.keyword\": \"Favorable\"}}}}}}, \"size\": 0}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "complex",
+        "entity_type": "reviews",
+        "operation": "count",
+        "filter_type": "case_id",
+        "nested": true,
+        "review_value": "favorable"
+      },
+      "tags": ["counting", "reviews", "nested", "favorable", "case_specific"]
+    },
+    {
+      "question": "Affaires pour le client Microsoft",
+      "query": "{\"query\": {\"term\": {\"caseClient.keyword\": \"Microsoft\"}}, \"size\": 0, \"track_total_hits\": true}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "cases",
+        "operation": "count",
+        "filter_type": "client"
+      },
+      "tags": ["counting", "cases", "client"]
+    }
+  ]
+}

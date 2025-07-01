@@ -1,11 +1,13 @@
 <?php
 
-namespace App\Service;
+namespace App\Service\Rag;
 
 use App\Entity\Rag\Rag;
 use App\Repository\Rag\RagRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Exception;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 
 readonly class RagService
 {
@@ -35,29 +37,13 @@ readonly class RagService
             }
 
             // Use repository method for vector search
-            $results = $this->ragRepository->findSimilarByEmbedding(
+            return $this->ragRepository->findSimilarByEmbedding(
                 $questionEmbedding,
                 $intent,
                 $similarityThreshold,
                 $maxResults
             );
-
-            $this->logger->info('Found similar examples', [
-                'question' => $question,
-                'intent' => $intent,
-                'found_count' => count($results),
-                'max_similarity' => $results[0]?->getSimilarityScore() ?? 0,
-            ]);
-
-            return $results;
-
-        } catch (\Exception $e) {
-            $this->logger->error('Failed to find similar examples', [
-                'question' => $question,
-                'intent' => $intent,
-                'error' => $e->getMessage(),
-            ]);
-
+        } catch (Exception) {
             return [];
         }
     }
@@ -73,11 +59,16 @@ readonly class RagService
         array $tags = []
     ): Rag {
         try {
+            $existing = $this->ragRepository->findExistingExample($question, $intent);
+            if ($existing) {
+                return $existing;
+            }
+
             // Generate embedding
             $embedding = $this->embeddingService->getEmbedding($question);
 
             if (empty($embedding)) {
-                throw new \RuntimeException('Failed to generate embedding for question');
+                throw new RuntimeException('Failed to generate embedding for question');
             }
 
             // Create new Rag entity
@@ -93,23 +84,9 @@ readonly class RagService
             $this->ragEntityManager->persist($rag);
             $this->ragEntityManager->flush();
 
-            $this->logger->info('Added new RAG example', [
-                'id' => $rag->getId(),
-                'question' => $question,
-                'intent' => $intent,
-                'tags' => $tags,
-            ]);
-
             return $rag;
-
-        } catch (\Exception $e) {
-            $this->logger->error('Failed to add RAG example', [
-                'question' => $question,
-                'intent' => $intent,
-                'error' => $e->getMessage(),
-            ]);
-
-            throw new \RuntimeException('Failed to add RAG example: ' . $e->getMessage(), 0, $e);
+        } catch (Exception $e) {
+            throw new RuntimeException('Failed to add RAG example: ' . $e->getMessage(), 0, $e);
         }
     }
 
@@ -159,7 +136,7 @@ readonly class RagService
                 'updated_count' => count($examples)
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->logger->error('Failed to update example usage', [
                 'error' => $e->getMessage()
             ]);

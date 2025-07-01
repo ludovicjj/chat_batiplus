@@ -11,6 +11,7 @@ use App\Service\Elasticsearch\ElasticsearchSecurityService;
 use App\Service\LLM\HumanResponseService;
 use App\Service\LLM\IntentService;
 use App\Service\QueryProcessor;
+use App\Service\Rag\RagService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -31,6 +32,7 @@ class ChatbotTestCommand extends Command
         private readonly ElasticsearchExecutorService $elasticsearchExecutorService,
         private readonly QueryProcessor $queryProcessor,
         private readonly HumanResponseService $humanResponseService,
+        private readonly RagService $ragService
     ) {
         parent::__construct();
     }
@@ -44,7 +46,7 @@ class ChatbotTestCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $io->title('ChatBot BatiPlus - Test des composants');
         // 1360 -test here (client case)
-        $question = "Peux-tu me dire combien il y a d'avis favorables ?";
+        $question = "Combien y a t il de rapports au total ?";
 
         $streamingData = $this->prepareElasticsearchData($io, $question);
 
@@ -89,16 +91,34 @@ class ChatbotTestCommand extends Command
         // 2. Test du schema
         $schema = $this->elasticsearchSchemaService->getMappingsStructure();
 
-        // 3. Test de génération LLM
-        $queryBody = $this->elasticsearchGeneratorService->generateQueryBody($normalizedQuestion, $schema, $intent);
+        // 3. Rag examples
+        $ragExamples = [];
+//        $ragExamples = $this->ragService->findSimilarExamples(
+//            question: $normalizedQuestion,
+//            intent: $intent,
+//            similarityThreshold: 0.65
+//        );
+//        if (!empty($ragExamples)) {
+//            foreach ($ragExamples as $index => $example) {
+//                $similarity = number_format(($example->getSimilarityScore() ?? 0) * 100, 1);
+//                $io->text("  📋 Exemple " . ($index + 1) . " (similarité: {$similarity}%)");
+//                $io->text("     Question: \"{$example->getQuestion()}\"");
+//                $io->text("     Query preview: " . substr($example->getQuery(), 0, 80) . '...');
+//            }
+//        } else {
+//            $io->text("Failed to find similarity");
+//        }
+
+        // 4. Test de génération LLM
+        $queryBody = $this->elasticsearchGeneratorService->generateQueryBody($normalizedQuestion, $schema, $intent, $ragExamples);
         $io->section('2. Réponse LLM (brute):');
         $io->text($queryBody);
 
-        // 4. Test de validation sécurité
+        // 5. Validate ES Query
         $this->elasticsearchSecurityService->validateQuery($queryBody);
         $io->section('3. Validation sécurité: ✅ PASSÉE');
 
-        // 5. Test d'exécution ES
+        // 6. Run ES query
         $results = $this->elasticsearchExecutorService->executeQuery($queryBody);
         $io->section('4. ES Raw result');
         $io->text(json_encode($results, JSON_PRETTY_PRINT));

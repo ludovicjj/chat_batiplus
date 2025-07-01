@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Rag;
 
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -11,7 +11,7 @@ use Throwable;
 
 readonly class EmbeddingService
 {
-    private const EMBEDDED_URL = 'http://embedding-service:5000/';
+    private const EMBEDDED_URL = 'http://127.0.0.1:5000';
     public function __construct(
         private HttpClientInterface $httpClient,
         private LoggerInterface     $logger

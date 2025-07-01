@@ -3,6 +3,7 @@
 namespace App\Repository\Rag;
 
 use App\Entity\Rag\Rag;
+use DateTimeImmutable;
 use Doctrine\Persistence\ManagerRegistry;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 
@@ -201,7 +202,9 @@ class RagRepository extends ServiceEntityRepository
         $entity = new Rag();
 
         // Set basic properties
-        $entity->setQuestion($data['question'])
+        $entity
+            ->setId($data['id'])
+            ->setQuestion($data['question'])
             ->setQuery($data['query'])
             ->setIntent($data['intent']);
 
@@ -227,6 +230,33 @@ class RagRepository extends ServiceEntityRepository
         $entity->setActive((bool) $data['active']);
         $entity->setUsageCount((int) ($data['usage_count'] ?? 0));
 
+        // Handle date
+        if ($data['created_at']) {
+            $entity->setCreatedAt(new DateTimeImmutable($data['created_at']));
+        }
+        if ($data['updated_at']) {
+            $entity->setUpdatedAt(new DateTimeImmutable($data['updated_at']));
+        }
+
         return $entity;
+    }
+
+    /**
+     * Check if an example already exists (avoid duplicates)
+     */
+    public function findExistingExample(string $question, string $intent): ?Rag
+    {
+        $connection = $this->getEntityManager()->getConnection();
+
+        $result = $connection->fetchAssociative(
+            'SELECT * FROM rag WHERE question = ? AND intent = ? AND active = true LIMIT 1',
+            [$question, $intent]
+        );
+
+        if (!$result) {
+            return null;
+        }
+
+        return $this->createEntityFromArray($result);
     }
 }
