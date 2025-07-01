@@ -1,6 +1,12 @@
 doctrine_migrations:
   migrations_paths:
-    # namespace is arbitrary but should be different from App\Migrations
-    # as migrations classes should NOT be autoloaded
-    'DoctrineMigrations': '%kernel.project_dir%/migrations'
+    # Migrations pour Entity Manager 'app' (MySQL)
+    'DoctrineMigrations\App': '%kernel.project_dir%/migrations/App'
+    # Migrations pour Entity Manager 'rag' (PostgreSQL)
+    'DoctrineMigrations\Rag': '%kernel.project_dir%/migrations/Rag'
+
+  storage:
+    table_storage:
+      table_name: 'doctrine_migration_versions'
+
   enable_profiler: false

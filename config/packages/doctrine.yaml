@@ -1,26 +1,55 @@
 doctrine:
   dbal:
-    url: '%env(DATABASE_URL)%'
+    default_connection: app
+    types:
+      vector: App\Doctrine\VectorType
+    connections:
+      app:
+        url: '%env(resolve:DATABASE_URL)%'
+        server_version: '5.7'
+      postgres:
+        url: '%env(resolve:POSTGRES_DATABASE_URL)%'
+        driver: 'pdo_pgsql'
+        charset: utf8
+        server_version: '16'
+        mapping_types:
+          vector: vector
 
     # IMPORTANT: You MUST configure your server version,
     # either here or in the DATABASE_URL env var (see .env file)
     #server_version: '16'
 
-    profiling_collect_backtrace: '%kernel.debug%'
+    # profiling_collect_backtrace: '%kernel.debug%'
+
   orm:
     auto_generate_proxy_classes: true
     enable_lazy_ghost_objects: true
-    report_fields_where_declared: true
-    validate_xml_mapping: true
-    naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
-    auto_mapping: true
-    mappings:
-      App:
-        type: attribute
-        is_bundle: false
-        dir: '%kernel.project_dir%/src/Entity'
-        prefix: 'App\Entity'
-        alias: App
+    default_entity_manager: app
+    # report_fields_where_declared: true
+    #validate_xml_mapping: true
+    entity_managers:
+      app:
+        auto_mapping: true
+        connection: app
+        naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
+        mappings:
+          app:
+            type: attribute
+            is_bundle: false
+            dir: '%kernel.project_dir%/src/Entity/App'
+            prefix: 'App\Entity\App'
+            alias: App
+      rag:
+        auto_mapping: false
+        connection: postgres
+        naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
+        mappings:
+          rag:
+            type: attribute
+            is_bundle: false
+            dir: '%kernel.project_dir%/src/Entity/Rag'
+            prefix: 'App\Entity\Rag'
+            alias: Rag
 
 when@test:
   doctrine:

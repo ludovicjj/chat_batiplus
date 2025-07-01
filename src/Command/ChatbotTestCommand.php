@@ -43,29 +43,8 @@ class ChatbotTestCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
         $io->title('ChatBot BatiPlus - Test des composants');
-
+        // 1360 -test here (client case)
         $question = "Peux-tu me dire combien il y a d'avis favorables ?";
-        //$question = "Peux-tu me donner les références des rapports dans l'affaire 94P0237518 dont le manager est Patrick TNAAVA ?";
-        //$question = "peux tu me donner des informations sur les rapports dans l'affaire ayant pour id 702";
-        //$question = "Combien d'avis favorables y a-t-il ?";
-        //$question = "Combien d'avis favorables dans l'affaire 94P0237518 ?";
-        //$question = "Combien d'avis favorables dans l'affaire avec l'ID 1360 ?";
-        //$question = "Combien d'avis F dans l'affaire avec la reference 94P0237518 dont le responsable d'affaire est William BAANNAAA";
-        //$question = "combien a t il d'avis S dans l'affaire ayant pour ID 1360";
-        //$question = "Combien a t il de report ?";
-        //$question = "Combien a t il d'avis' ?";
-        //$question = "Combien d'affaires pour le manager William BAANNAAA ?";
-        //$question = "Combien d'affaires pour le client AP/HP - Hopital de Bicetre ?";
-        //$question = "Combien d'affaires par agence ?";
-        //$question = "Combien d'avis F au total ?";
-        //$question = "Téléchargement les rapports de l'affaire ayant pour id 1360";
-        //$question = "combien a t il d'affaires actuellement ?";
-        //$question = "combien a t il de rapport dans l'affaire ayant pour titre AMELIORATION DE LA SECURITE INCENDIE SECTEUR JAUNE HOPITAL PAUL BROUSSE";
-
-        // CRAZY Question
-//        $question = "Combien d'avis violets dans l'affaire 1360 ?";
-//        $question = "Combien d'avis dans l'affaire LICORNE123 ?";
-//        $question = "Salut comment vas tu ?";
 
         $streamingData = $this->prepareElasticsearchData($io, $question);
 
