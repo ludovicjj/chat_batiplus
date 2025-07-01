@@ -1,0 +1,32 @@
+version: '3.8'
+services:
+  postgres-rag:
+    image: pgvector/pgvector:pg16
+    container_name: chatbot_postgres_rag
+    environment:
+      POSTGRES_DB: chatbot_rag
+      POSTGRES_USER: rag_user
+      POSTGRES_PASSWORD: rag_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_rag_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - chatbot_network
+
+  embedding-service:
+    build:
+      context: ./docker/embedding
+    container_name: chatbot_embedding
+    ports:
+      - "5000:5000"
+    networks:
+      - chatbot_network
+
+volumes:
+  postgres_rag_data:
+
+networks:
+  chatbot_network:
+    driver: bridge

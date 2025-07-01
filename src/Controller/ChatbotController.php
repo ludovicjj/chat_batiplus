@@ -64,7 +64,6 @@ class ChatbotController extends AbstractController
         Request $request,
         RequestHandler $requestHandler,
         ElasticsearchStreamingResponseService $streamingResponseService // ES
-//        StreamingResponseService $streamingResponseService // SQL
     ): Response {
         $result = $requestHandler->handle($request);
         return $streamingResponseService->createStreamingResponse($result['question']);

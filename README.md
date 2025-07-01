@@ -1,210 +1,208 @@
-# ChatBot BatiPlus
+# ChatBot
 
-Assistant virtuel sécurisé pour interroger les données d'une entreprise de bâtiment.
+Chatbot intelligent pour interroger les données Elasticsearch avec du langage naturel.
+vous pouvez utiliser la structure du projet et l'adapter a votre propre use case
+Ce projet a ete concu en collaboration avec une IA.
 
 ## Fonctionnalités
 
-- **Sécurité renforcée** : Validation stricte des requêtes SQL, accès en lecture seule
-- **Interface LLM** : Utilise GPT-4 pour transformer les questions en requêtes SQL et les résultats en réponses compréhensibles
-- **Interface web** : Chat interface moderne et responsive
-- **Logging complet** : Traçabilité de toutes les opérations
-- **API REST** : Endpoints pour intégration avec d'autres systèmes
+- **Questions naturelles** → Requêtes Elasticsearch automatiques
+- **RAG (Retrieval-Augmented Generation)** → Apprentissage par exemples
+- **Streaming SSE** → Réponses en temps réel
+- **Sécurité** → Validation des requêtes générées
+- **Dates dynamiques** → Gestion automatique des périodes
+
+## Workflow
+
+```
+Question utilisateur
+    ↓
+1. Normalisation de la question
+2. Classification d'intent (INFO/CHITCHAT/DOWNLOAD)  
+3. Recherche d'exemples similaires (RAG - micro service dockerisé)
+4. Génération query Elasticsearch (LLM)
+5. Validation sécurité
+6. Exécution sur Elasticsearch
+7. Réponse humaine (LLM + streaming)
+```
+
+## Cas d'usage supportés
+
+### Comptage
+- `"Combien d'affaires au total ?"`
+- `"Nombre de rapports créés cette année"`
+- `"Affaires en travaux"`
+
+### Recherche d'informations
+- `"Donne-moi des infos sur l'affaire ID 1360"`
+- `"Détails de l'affaire référence 94P0237518"`
+
+### Filtres temporels
+- `"Rapports validés ce mois"`
+- `"Affaires créées cette année"`
+
+### Filtres de statut
+- `"Affaires en conception/travaux/réception"`
+- `"Répartition par statut"`
 
 ## Installation
 
-### 1. Prérequis
-
-- PHP 8.3+
-- Composer
-- MySQL/MariaDB
-- Clé API OpenAI
-
-### 2. Installation des dépendances
-
 ```bash
+# Dépendances
 composer install
+npm install
+
+# Configuration
+cp .env .env.local
+# Configurer DATABASE_URL, ELASTICSEARCH_URL, etc.
+
+# Base de données
+php bin/console doctrine:migrations:migrate
+
+# Assets
+npm run build
 ```
 
-### 3. Configuration de la base de données
+## Configuration
 
-#### Créer un utilisateur en lecture seule
-
-```sql
--- Créer l'utilisateur
-CREATE USER 'readonly_user'@'localhost' IDENTIFIED BY 'secure_password';
-
--- Accorder uniquement les privilèges SELECT sur la base de données
-GRANT SELECT ON company_db.* TO 'readonly_user'@'localhost';
-
--- Appliquer les changements
-FLUSH PRIVILEGES;
+### Elasticsearch
+```yaml
+# config/elasticsearch/mapping.yaml
+# Définit la structure des données
 ```
 
-#### Structure de base de données attendue
+### RAG Dataset
+```json
+# config/rag/dataset_examples.json
+# Exemples d'apprentissage question/query
+```
 
-Le système attend ces tables (configurables via ALLOWED_TABLES) :
+### Prompts LLM
+```
+# config/elasticsearch/prompts/
+├── base.md              # Instructions de base
+├── rules-core.md        # Règles JSON/syntaxe  
+├── rules-fields.md      # Champs disponibles
+└── rules-counting.md    # Patterns de comptage
+```
 
-- `clients` : Informations clients
-- `projets` : Projets de construction
-- `interventions` : Interventions techniques
-- `factures` : Factures émises
-- `devis` : Devis proposés
+## Commandes principales
 
-## Utilisation
-
-### 1. Démarrer le serveur de développement
+### RAG (Retrieval-Augmented Generation)
 
 ```bash
-symfony server:start
+# Charger les exemples RAG en base
+php bin/console rag:test --action=add --reset
+
+# Tester la similarité des questions
+php bin/console rag:test --action=similarity
+
+# Statistiques du dataset
+php bin/console rag:test --action=stats
+
+# Vérifier la santé du service d'embedding
+php bin/console rag:test --action=health
+
+# Vérifier les connexions DB
+php bin/console rag:test --action=connection
 ```
 
-Ou avec PHP :
+### Test du ChatBot
 
 ```bash
-php -S localhost:8000 -t public/
-```
-
-### 2. Accéder à l'interface
-
-- Interface chat : `http://localhost:8000`
-
-### 3. API REST
-
-#### Poser une question
-
-```bash
-curl -X POST http://localhost:8000/api/chatbot/ask \
-  -H "Content-Type: application/json" \
-  -d '{"question": "Combien de collaborateurs actifs ?"}'
-```
-
-#### Vérifier le statut
-
-```bash
-curl http://localhost:8000/api/chatbot/status
-```
-
-### 4. Commandes de test
-
-```bash
-# Test complet du système
+# Test complet du workflow
 php bin/console chatbot:test
 
-# Afficher le schéma de la base
-php bin/console chatbot:test --schema
-
-# Tester la sécurité SQL
-php bin/console chatbot:test --security
-
-# Tester avec une question
-php bin/console chatbot:test -q "Combien de clients avons-nous ?"
+# Le test inclut automatiquement :
+# - Normalisation de la question
+# - Classification d'intent  
+# - Recherche RAG d'exemples similaires
+# - Génération de query Elasticsearch
+# - Validation sécurité
+# - Exécution et réponse
 ```
 
-## Architecture
+### Enrichissement RAG
+
+```bash
+# Générer de nouveaux exemples (développement)
+php bin/console rag:enrich --preview
+php bin/console rag:enrich --category=temporal --count=5
+php bin/console rag:enrich --generate
+```
+
+##  Architecture technique
 
 ### Services principaux
 
-1. **ChatbotService** : Orchestrateur principal
-2. **LlmService** : Communication avec GPT-4
-3. **SqlSecurityService** : Validation et sécurisation SQL
-4. **DatabaseSchemaService** : Gestion du schéma de données
+- **`RagService`** → Gestion des exemples d'apprentissage
+- **`ElasticsearchGeneratorService`** → Génération de requêtes
+- **`HumanResponseService`** → Réponses en langage naturel
+- **`ServerSentEventService`** → Streaming temps réel
 
 ### Sécurité
 
-#### Mesures de protection
+- Validation des requêtes générées
+- Sanitisation des inputs utilisateur
+- Limitation des champs accessibles
 
-- ✅ Utilisateur BDD en lecture seule
-- ✅ Validation stricte des requêtes SQL
-- ✅ Whitelist des tables autorisées
-- ✅ Timeout sur les requêtes
-- ✅ Blocage des mots-clés dangereux
-- ✅ Logging de toutes les tentatives
+### Performance
 
-#### Mots-clés bloqués
+- Cache des embeddings RAG
+- Streaming SSE pour UX fluide
+- Gestion des timeouts et mémoire
 
+## Métriques & Monitoring
+
+### Scores RAG
+- **>85%** → Match excellent
+- **70-85%** → Match bon
+- **<70%** → Pas de match utilisé
+
+### Questions supportées
+- **~80%** des questions métier courantes
+- **25+ patterns** Elasticsearch couverts
+- **50+ variations** linguistiques
+
+## 🧪 Développement
+
+### Ajouter un nouveau cas d'usage
+
+1. **Créer l'exemple** dans `dataset_examples.json`
+```json
+{
+  "questions": ["Nouvelle question ?", "Variante question"],
+  "query": "{\"query\": {...}}",
+  "intent": "INFO",
+  "metadata": {...},
+  "tags": [...]
+}
 ```
-INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, 
-REPLACE, MERGE, CALL, EXEC, EXECUTE, GRANT, REVOKE,
-LOAD, OUTFILE, DUMPFILE, INTO, INFORMATION_SCHEMA
+
+2. **Recharger le RAG**
+```bash
+php bin/console rag:test --action=add --reset
 ```
 
-## Exemples de questions
-
-- "Combien de clients avons-nous ?"
-- "Quels sont les projets en cours ?"
-- "Montant total des factures de ce mois"
-- "Liste des interventions de la semaine dernière"
-- "Clients avec le plus de projets"
-- "Évolution du chiffre d'affaires"
-
-## Monitoring et logs
-
-### Fichiers de logs
-
-- `var/log/dev.log` : Logs généraux
-- `var/log/security.log` : Événements de sécurité
-- `var/log/chatbot.log` : Opérations du chatbot
-
-### Surveillance
-
-Surveillez ces métriques :
-
-- Tentatives de requêtes non autorisées
-- Temps de réponse des requêtes
-- Erreurs de l'API LLM
-- Utilisation des ressources
-
-## Troubleshooting
-
-### Problèmes courants
-
-1. **Erreur de connexion base de données**
-   - Vérifiez `DATABASE_URL`
-   - Testez la connexion utilisateur
-
-2. **Erreur API OpenAI**
-   - Vérifiez `OPENAI_API_KEY`
-   - Contrôlez les quotas API
-
-3. **Tables non trouvées**
-   - Vérifiez `ALLOWED_TABLES`
-   - Confirmez l'existence des tables
+3. **Tester**
+```bash
+php bin/console rag:test --action=similarity
+```
 
 ### Debug
 
 ```bash
-# Vérifier la configuration
-php bin/console debug:config
+# Logs des requêtes générées
+tail -f var/log/dev.log | grep "Elasticsearch"
 
-# Tester la base de données
-php bin/console dbal:run-sql "SELECT 1"
-
-# Effacer le cache
-php bin/console cache:clear
-```
-
-## Développement
-
-### Ajouter de nouvelles fonctionnalités
-
-1. **Nouvelle table** : Ajoutez-la à `ALLOWED_TABLES`
-2. **Nouveau type de question** : Étendez les prompts dans `LlmService`
-3. **Nouvelle validation** : Modifiez `SqlSecurityService`
-
-### Tests
-
-```bash
-# Tests unitaires (à implémenter)
-php bin/phpunit
-
-# Tests d'intégration
+# Test d'une question spécifique  
+# Modifier la question dans ChatbotTestCommand.php
 php bin/console chatbot:test
 ```
 
-## Contribution
+## Statut du projet
 
-1. Fork le projet
-2. Créez une branche (`git checkout -b feature/nouvelle-fonctionnalite`)
-3. Committez (`git commit -am 'Ajout nouvelle fonctionnalité'`)
-4. Push (`git push origin feature/nouvelle-fonctionnalite`)
-5. Créez une Pull Request
+- ✅ **POC fonctionnel**
+- ✅ **Cas d'usage métier couverts**
+- ✅ **Architecture évolutive**
+- 🔄 **En amélioration continue**

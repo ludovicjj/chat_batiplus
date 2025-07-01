@@ -1,0 +1,724 @@
+{
+  "version": "1.0",
+  "description": "Dataset d'exemples pour le système de RAG",
+  "examples": [
+    {
+      "questions": [
+        "Combien d'affaires au total ?",
+        "Nombre total d'affaires",
+        "Combien de dossiers au total ?",
+        "Quel est le nombre total de dossiers ?",
+        "Combien y a-t-il d'affaires ?",
+        "Total des affaires",
+        "Statistiques globales des affaires",
+        "Combien d'affaires sont enregistrées ?",
+        "Volume total des dossiers",
+        "Nombre global de dossiers d'affaires",
+        "Quantité totale d'affaires en cours",
+        "Effectif total des dossiers"
+      ],
+      "query": "{\"query\": {\"match_all\": {}}, \"size\": 0, \"track_total_hits\": true}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "simple",
+        "entity_type": "cases",
+        "operation": "count",
+        "pattern": "match_all"
+      },
+      "tags": ["counting", "cases", "total"]
+    },
+    {
+      "questions": [
+        "Combien de rapports au total ?",
+        "Nombre total de rapports",
+        "Combien de livrables au total ?",
+        "Quel est le nombre total de livrables ?",
+        "Combien y a-t-il de rapports ?",
+        "Total des rapports",
+        "Combien de documents produits ?",
+        "Volume de production documentaire",
+        "Nombre de livrables générés",
+        "Quantité de rapports rédigés",
+        "Statistiques de production de rapports",
+        "Combien de fichiers rapports créés ?"
+      ],
+      "query": "{\"size\": 0, \"aggs\": {\"total_reports\": {\"sum\": {\"field\": \"reportsCount\"}}}}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "simple",
+        "entity_type": "reports",
+        "operation": "count",
+        "pattern": "sum_aggregation"
+      },
+      "tags": ["counting", "reports", "total"]
+    },
+    {
+      "questions": [
+        "Combien d'avis au total ?",
+        "Nombre total d'avis",
+        "Combien d'évaluations au total ?",
+        "Quel est le nombre total d'avis ?",
+        "Combien y a-t-il d'avis ?",
+        "Total des avis",
+        "Combien d'évaluations qualité ?",
+        "Nombre d'opinions émises",
+        "Quantité de retours d'expertise",
+        "Statistiques des évaluations",
+        "Combien de reviews effectuées ?"
+      ],
+      "query": "{\"size\": 0, \"aggs\": {\"total_reviews\": {\"nested\": {\"path\": \"reports.reportReviews\"}, \"aggs\": {\"count\": {\"value_count\": {\"field\": \"reports.reportReviews.reviewId\"}}}}}}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "reviews",
+        "operation": "count",
+        "pattern": "nested_count",
+        "nested": true
+      },
+      "tags": ["counting", "reviews", "total", "nested"]
+    },
+
+    {
+      "questions": [
+        "Affaire avec l'ID 869",
+        "Dossier ID 869",
+        "Dossier ID 1360",
+        "Affaire numéro 869",
+        "Affaire avec l'identifiant 869",
+        "Dossier avec l'ID 869",
+        "Recherche affaire ID 869"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseId\": 869}}, \"_source\": [\"caseClient\"]}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "simple",
+        "entity_type": "cases",
+        "operation": "search",
+        "pattern": "term_search",
+        "filter_type": "id"
+      },
+      "tags": ["search", "cases", "id"]
+    },
+
+    {
+      "questions": [
+        "Affaire avec la référence 94P0237518",
+        "Dossier référence 94P0237518",
+        "Affaire réf 94P0237518",
+        "Recherche par référence 94P0237518",
+        "Dossier avec la référence 94P0237518",
+        "Affaire référencée 94P0237518"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseReference\": \"94P0237518\"}}}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "simple",
+        "entity_type": "cases",
+        "operation": "search",
+        "pattern": "term_search",
+        "filter_type": "reference"
+      },
+      "tags": ["search", "cases", "reference"]
+    },
+
+    {
+      "questions": [
+        "Affaires pour le manager William BAANNAAA",
+        "Dossiers manager Pierre DUPONT",
+        "Affaires gérées par Jean YANAZ",
+        "Combien d'affaires pour Mostafa AALAH ?",
+        "Nombre d'affaires du manager Patrice NAAL",
+        "Dossiers sous la responsabilité de Franck CANNAZ"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseManager.keyword\": \"William BAANNAAA\"}}, \"size\": 0, \"track_total_hits\": true}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "cases",
+        "operation": "count",
+        "pattern": "term_filter",
+        "filter_type": "manager"
+      },
+      "tags": ["counting", "cases", "manager"]
+    },
+
+    {
+      "questions": [
+        "Combien y a-t-il de rapports dans l'affaire ID 52 ?",
+        "Nombre de rapports pour l'affaire ID 52",
+        "Combien de livrables dans l'affaire 52 ?",
+        "Quantité de rapports affaire numéro 52",
+        "Volume documentaire de l'affaire ID 136",
+        "Nombre de documents produits pour l'affaire 1360"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseId\": 52}}, \"size\": 0, \"aggs\": {\"total_reports\": {\"sum\": {\"field\": \"reportsCount\"}}}}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "reports",
+        "operation": "count",
+        "pattern": "case_specific_aggregation",
+        "filter_type": "case_id"
+      },
+      "tags": ["counting", "reports", "case_specific", "id_filter"]
+    },
+
+    {
+      "questions": [
+        "Combien y a-t-il de rapports dans l'affaire avec la référence 78002ASX001 ?",
+        "Nombre de rapports pour l'affaire référence 78002ASX001",
+        "Combien de livrables dans l'affaire 78002ASX001 ?",
+        "Quantité de rapports affaire réf 78002ASX001",
+        "Volume documentaire affaire référence 78002ASX001",
+        "Nombre de documents produits pour la référence 78002ASX001"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseReference\": \"78002ASX001\"}}, \"size\": 0, \"aggs\": {\"total_reports\": {\"sum\": {\"field\": \"reportsCount\"}}}}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "reports",
+        "operation": "count",
+        "pattern": "case_specific_aggregation",
+        "filter_type": "case_reference"
+      },
+      "tags": ["counting", "reports", "case_specific", "reference_filter"]
+    },
+
+    {
+      "questions": [
+        "Combien d'avis favorables dans l'affaire 94P0237513 dont le manager est William BAANNAAA ?",
+        "Nombre d'avis favorables pour l'affaire 94P0237513 manager William BAANNAAA",
+        "Évaluations positives dans l'affaire 94P0237513 gérée par William BAANNAAA",
+        "Combien d'opinions favorables affaire 94P0237513 manager William BAANNAAA ?",
+        "Retours positifs dans le dossier 94P0237513 de William BAANNAAA",
+        "Nombre d'expertises favorables affaire 94P0237513 William BAANNAAA"
+      ],
+      "query": "{\"query\": {\"bool\": {\"must\": [{\"term\": {\"caseReference\": \"94P0237513\"}}, {\"term\": {\"caseManager.keyword\": \"William BAANNAAA\"}}]}}, \"size\": 0, \"aggs\": {\"reports\": {\"nested\": {\"path\": \"reports\"}, \"aggs\": {\"reviews\": {\"nested\": {\"path\": \"reports.reportReviews\"}, \"aggs\": {\"count_avis\": {\"filter\": {\"term\": {\"reports.reportReviews.reviewValueName\": \"Favorable\"}}}}}}}}}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "complex",
+        "entity_type": "reviews",
+        "operation": "count",
+        "pattern": "multi_filter_nested_aggregation",
+        "filter_type": "case_reference_and_manager",
+        "nested": true,
+        "review_value": "favorable"
+      },
+      "tags": ["counting", "reviews", "favorable", "nested", "multi_filter", "case_specific", "manager"]
+    },
+
+    {
+      "questions": [
+        "Quelle est la référence des rapports dans l'affaire 94P0237518 dont le manager est Patrick Trouvé ?",
+        "Références des rapports affaire 94P0237518 manager Patrick Trouvé",
+        "Liste des références de livrables pour l'affaire 94P0237518 gérée par Patrick Trouvé",
+        "Identifiants des rapports dans le dossier 94P0237518 de Patrick Trouvé",
+        "Références documentaires affaire 94P0237518 manager Patrick Trouvé",
+        "Numéros des rapports pour l'affaire 94P0237518 Patrick Trouvé"
+      ],
+      "query": "{\"query\": {\"bool\": {\"must\": [{\"term\": {\"caseReference\": \"94P0237518\"}}, {\"term\": {\"caseManager.keyword\": \"Patrick Trouvé\"}}]}}, \"_source\": [\"caseId\", \"caseReference\", \"caseManager\", \"reports\"]}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "complex",
+        "entity_type": "reports",
+        "operation": "search",
+        "pattern": "multi_filter_source_selection",
+        "filter_type": "case_reference_and_manager",
+        "returns": "report_references"
+      },
+      "tags": ["search", "reports", "references", "multi_filter", "case_specific", "manager"]
+    },
+
+    {
+      "questions": [
+        "Combien de rapports dans l'affaire TITRE EXACT",
+        "Nombre de rapports pour l'affaire avec le titre TITRE EXACT",
+        "Quantité de livrables dans l'affaire intitulée TITRE EXACT",
+        "Volume documentaire pour l'affaire TITRE EXACT",
+        "Nombre de documents produits pour l'affaire TITRE EXACT",
+        "Combien de rapports générés pour l'affaire TITRE EXACT"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseTitle.keyword\": \"TITRE EXACT DE L'AFFAIRE\"}}, \"size\": 0, \"aggs\": {\"total_reports\": {\"sum\": {\"field\": \"reportsCount\"}}}}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "reports",
+        "operation": "count",
+        "pattern": "case_title_aggregation",
+        "filter_type": "case_title"
+      },
+      "tags": ["counting", "reports", "case_specific", "title_filter"]
+    },
+
+    {
+      "questions": [
+        "Peux-tu me dire combien d'affaires il y a par client ?",
+        "Répartition des affaires par client",
+        "Distribution des dossiers par client",
+        "Nombre d'affaires pour chaque client",
+        "Statistiques d'affaires par client",
+        "Ventilation des dossiers clients"
+      ],
+      "query": "{\"aggs\": {\"clients\": {\"terms\": {\"field\": \"caseClient.normalized\"}}}, \"size\": 0}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "cases",
+        "operation": "aggregation",
+        "pattern": "terms_aggregation",
+        "filter_type": "distribution",
+        "group_by": "client"
+      },
+      "tags": ["aggregation", "cases", "distribution", "clients", "statistics"]
+    },
+
+    {
+      "questions": [
+        "Combien il y a d'affaires par agence ?",
+        "Répartition des affaires par agence",
+        "Distribution des dossiers par agence",
+        "Nombre d'affaires pour chaque agence",
+        "Statistiques d'affaires par agence",
+        "Ventilation des dossiers agences"
+      ],
+      "query": "{\"aggs\": {\"agencies\": {\"terms\": {\"field\": \"caseAgency.normalized\"}}}, \"size\": 0}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "cases",
+        "operation": "aggregation",
+        "pattern": "terms_aggregation",
+        "filter_type": "distribution",
+        "group_by": "agency"
+      },
+      "tags": ["aggregation", "cases", "distribution", "agencies", "statistics"]
+    },
+
+    {
+      "questions": [
+        "Combien il y a d'affaires par agence ?",
+        "Répartition des affaires par agence",
+        "Distribution des dossiers par agence",
+        "Nombre d'affaires pour chaque agence",
+        "Statistiques d'affaires par agence",
+        "Ventilation des dossiers agences"
+      ],
+      "query": "{\"aggs\": {\"agencies\": {\"terms\": {\"field\": \"caseAgency.normalized\"}}}, \"size\": 0}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "cases",
+        "operation": "aggregation",
+        "pattern": "terms_aggregation",
+        "filter_type": "distribution",
+        "group_by": "agency"
+      },
+      "tags": ["aggregation", "cases", "distribution", "agencies", "statistics"]
+    },
+
+    {
+      "questions": [
+        "Combien d'avis défavorables dans l'affaire ID 123 ?",
+        "Nombre d'avis défavorables pour l'affaire 123",
+        "Évaluations négatives dans l'affaire 123",
+        "Combien d'opinions défavorables affaire ID 123 ?",
+        "Retours négatifs dans le dossier 123"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseId\": 123}}, \"size\": 0, \"aggs\": {\"reports\": {\"nested\": {\"path\": \"reports\"}, \"aggs\": {\"reviews\": {\"nested\": {\"path\": \"reports.reportReviews\"}, \"aggs\": {\"count_avis\": {\"filter\": {\"term\": {\"reports.reportReviews.reviewValueName\": \"Défavorable\"}}}}}}}}}",
+      "intent": "INFO",
+      "metadata": {
+        "review_value": "defavorable",
+        "review_code": "D"
+      },
+      "tags": ["counting", "reviews", "defavorable", "nested", "case_specific"]
+    },
+
+    {
+      "questions": [
+        "Combien d'avis suspendus dans l'affaire référence ABC123 ?",
+        "Nombre d'avis suspendus pour l'affaire ABC123",
+        "Évaluations en suspens dans l'affaire ABC123"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseReference\": \"ABC123\"}}, \"size\": 0, \"aggs\": {\"reports\": {\"nested\": {\"path\": \"reports\"}, \"aggs\": {\"reviews\": {\"nested\": {\"path\": \"reports.reportReviews\"}, \"aggs\": {\"count_avis\": {\"filter\": {\"term\": {\"reports.reportReviews.reviewValueName\": \"Suspendu\"}}}}}}}}}",
+      "intent": "INFO",
+      "metadata": {
+        "review_value": "suspendu",
+        "review_code": "S"
+      },
+      "tags": ["counting", "reviews", "suspendu", "nested", "case_specific"]
+    },
+
+    {
+      "questions": [
+        "Combien d'avis pour mémoire dans l'affaire ID 456 ?",
+        "Nombre d'avis pour mémoire pour l'affaire 456"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseId\": 456}}, \"size\": 0, \"aggs\": {\"reports\": {\"nested\": {\"path\": \"reports\"}, \"aggs\": {\"reviews\": {\"nested\": {\"path\": \"reports.reportReviews\"}, \"aggs\": {\"count_avis\": {\"filter\": {\"term\": {\"reports.reportReviews.reviewValueName\": \"Pour mémoire\"}}}}}}}}}",
+      "intent": "INFO",
+      "metadata": {
+        "review_value": "pour_memoire",
+        "review_code": "PM"
+      },
+      "tags": ["counting", "reviews", "pour_memoire", "nested", "case_specific"]
+    },
+    {
+      "questions": [
+        "Combien d'avis Favorable dans l'affaire ID 456 ?",
+        "Nombre d'avis f pour l'affaire 456",
+        "Nombre d'avis F pour l'affaire 456"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseId\": 456}}, \"size\": 0, \"aggs\": {\"reports\": {\"nested\": {\"path\": \"reports\"}, \"aggs\": {\"reviews\": {\"nested\": {\"path\": \"reports.reportReviews\"}, \"aggs\": {\"count_avis\": {\"filter\": {\"term\": {\"reports.reportReviews.reviewValueName\": \"Favorable\"}}}}}}}}}",
+      "intent": "INFO",
+      "metadata": {
+        "review_value": "pour_memoire",
+        "review_code": "PM"
+      },
+      "tags": ["counting", "reviews", "pour_memoire", "nested", "case_specific"]
+    },
+    {
+      "questions": [
+        "Combien y a-t-il d'avis dans l'affaire ID 1360 ?",
+        "Nombre total d'avis pour l'affaire ID 1360",
+        "Combien d'évaluations dans l'affaire 1360 ?",
+        "Quantité d'avis affaire numéro 1360",
+        "Volume d'évaluations pour l'affaire ID 1360",
+        "Nombre d'opinions émises pour l'affaire 1360",
+        "Total des avis dans le dossier ID 1360",
+        "Combien d'expertises pour l'affaire 1360 ?",
+        "Combien y a-t-il d'avis dans l'affaire ID 1360 ?",
+        "Nombre total d'avis pour l'affaire ID 1360"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseId\": 1360}}, \"size\": 0, \"aggs\": {\"total_reviews\": {\"nested\": {\"path\": \"reports.reportReviews\"}, \"aggs\": {\"count\": {\"value_count\": {\"field\": \"reports.reportReviews.reviewId\"}}}}}}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "reviews",
+        "operation": "count",
+        "pattern": "case_specific_nested_count",
+        "filter_type": "case_id",
+        "nested": true,
+        "all_statuses": true
+      },
+      "tags": ["counting", "reviews", "case_specific", "total", "nested"]
+    },
+    {
+      "questions": [
+        "Donne-moi des informations sur les avis dans l'affaire avec ID 1360",
+        "Peux-tu me donner des informations sur les avis dans l'affaire ID 1360 ?",
+        "Informations des avis pour l'affaire ID 1360",
+        "Détails des avis dans l'affaire 1360",
+        "Que disent les avis de l'affaire ID 1360 ?",
+        "Contenu des avis pour l'affaire numéro 1360",
+        "Afficher les avis de l'affaire ID 1360",
+        "Évaluations détaillées pour l'affaire 1360"
+      ],
+      "query": "{\"query\": {\"bool\": {\"must\": [{\"term\": {\"caseId\": 1360}}, {\"nested\": {\"path\": \"reports.reportReviews\", \"query\": {\"exists\": {\"field\": \"reports.reportReviews\"}}}}]}}, \"_source\": [\"caseId\", \"caseReference\", \"reports.reportReviews\"], \"size\": 10}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "complex",
+        "entity_type": "reviews",
+        "operation": "search",
+        "pattern": "nested_information_retrieval",
+        "filter_type": "case_id",
+        "nested": true,
+        "returns": "detailed_data"
+      },
+      "tags": ["search", "reviews", "information", "nested", "case_specific", "detailed"]
+    },
+    {
+      "questions": [
+        "Donne-moi des informations sur les avis dans l'affaire référence 94P0237518",
+        "Informations des avis pour l'affaire référence 94P0237518",
+        "Détails des avis dans l'affaire 94P0237518",
+        "Contenu des avis pour l'affaire réf 94P0237518"
+      ],
+      "query": "{\"query\": {\"bool\": {\"must\": [{\"term\": {\"caseReference\": \"94P0237518\"}}, {\"nested\": {\"path\": \"reports.reportReviews\", \"query\": {\"exists\": {\"field\": \"reports.reportReviews\"}}}}]}}, \"_source\": [\"caseId\", \"caseReference\", \"reports.reportReviews\"], \"size\": 10}",
+      "intent": "INFO",
+      "metadata": {
+        "filter_type": "case_reference"
+      },
+      "tags": ["search", "reviews", "information", "nested", "case_specific", "detailed", "reference"]
+    },
+    {
+      "questions": [
+        "Donne-moi des informations sur les rapports dans l'affaire ID 1360",
+        "Informations des rapports pour l'affaire ID 1360",
+        "Détails des rapports dans l'affaire 1360",
+        "Contenu des rapports pour l'affaire numéro 1360"
+      ],
+      "query": "{\"query\": {\"bool\": {\"must\": [{\"term\": {\"caseId\": 1360}}, {\"nested\": {\"path\": \"reports\", \"query\": {\"exists\": {\"field\": \"reports\"}}}}]}}, \"_source\": [\"caseId\", \"caseReference\", \"reports\"], \"size\": 10}",
+      "intent": "INFO",
+      "metadata": {
+        "entity_type": "reports"
+      },
+      "tags": ["search", "reports", "information", "nested", "case_specific", "detailed"]
+    },
+    {
+      "questions": [
+        "Donne-moi des informations sur l'affaire ID 1360",
+        "Peux-tu me donner les détails de l'affaire ID 1360 ?",
+        "Affiche-moi les données de l'affaire numéro 1360",
+        "Que contient l'affaire ID 1360 ?",
+        "Montre-moi les informations complètes de l'affaire 1360",
+        "Détails complets de l'affaire ID 1360"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseId\": 1360}}, \"_source\": [\"caseId\", \"caseReference\", \"caseTitle\", \"caseClient\", \"caseManager\", \"caseStatus\", \"reportsCount\", \"reviewsCount\"], \"size\": 1}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "cases",
+        "operation": "search",
+        "pattern": "case_information_retrieval",
+        "filter_type": "case_id",
+        "returns": "detailed_case_info"
+      },
+      "tags": ["search", "cases", "information", "details", "case_specific"]
+    },
+    {
+      "questions": [
+        "Donne-moi des informations sur l'affaire référence 94P0237518",
+        "Peux-tu me donner les détails de l'affaire référence 94P0237518 ?",
+        "Affiche-moi les données de l'affaire 94P0237518",
+        "Que contient l'affaire référence 94P0237518 ?",
+        "Montre-moi les informations de l'affaire réf 94P0237518",
+        "Détails de l'affaire référence 94P0237518"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseReference\": \"94P0237518\"}}, \"_source\": [\"caseId\", \"caseReference\", \"caseTitle\", \"caseClient\", \"caseManager\", \"caseStatus\", \"reportsCount\", \"reviewsCount\"], \"size\": 10}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "cases",
+        "operation": "search",
+        "pattern": "case_information_retrieval",
+        "filter_type": "case_reference",
+        "returns": "detailed_case_info"
+      },
+      "tags": ["search", "cases", "information", "details", "case_specific", "reference"]
+    },
+    {
+      "questions": [
+        "Combien d'affaires en conception ?",
+        "Nombre d'affaires en phase de conception",
+        "Affaires au statut conception",
+        "Combien de dossiers en conception ?",
+        "Total des affaires en cours de conception",
+        "Quantité d'affaires phase conception"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseStatus.normalized\": \"conception\"}}, \"size\": 0, \"track_total_hits\": true}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "simple",
+        "entity_type": "cases",
+        "operation": "count",
+        "pattern": "status_filter_count",
+        "filter_type": "status",
+        "status_value": "conception"
+      },
+      "tags": ["counting", "cases", "status", "conception"]
+    },
+
+    {
+      "questions": [
+        "Combien d'affaires en travaux ?",
+        "Nombre d'affaires en phase travaux",
+        "Affaires au statut travaux",
+        "Combien de dossiers en travaux ?",
+        "Total des affaires en cours de travaux",
+        "Quantité d'affaires phase travaux"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseStatus.normalized\": \"travaux\"}}, \"size\": 0, \"track_total_hits\": true}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "simple",
+        "entity_type": "cases",
+        "operation": "count",
+        "pattern": "status_filter_count",
+        "filter_type": "status",
+        "status_value": "travaux"
+      },
+      "tags": ["counting", "cases", "status", "travaux"]
+    },
+
+    {
+      "questions": [
+        "Combien d'affaires en réception ?",
+        "Nombre d'affaires en phase réception",
+        "Affaires au statut réception",
+        "Combien de dossiers en réception ?",
+        "Total des affaires en cours de réception",
+        "Quantité d'affaires phase réception"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseStatus.normalized\": \"réception\"}}, \"size\": 0, \"track_total_hits\": true}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "simple",
+        "entity_type": "cases",
+        "operation": "count",
+        "pattern": "status_filter_count",
+        "filter_type": "status",
+        "status_value": "reception"
+      },
+      "tags": ["counting", "cases", "status", "reception"]
+    },
+
+    {
+      "questions": [
+        "Répartition des affaires par statut",
+        "Distribution des affaires par phase",
+        "Affaires par statut",
+        "Statistiques des statuts d'affaires",
+        "Combien d'affaires dans chaque phase ?",
+        "Ventilation par statut des dossiers"
+      ],
+      "query": "{\"aggs\": {\"status_distribution\": {\"terms\": {\"field\": \"caseStatus.normalized\"}}}, \"size\": 0}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "cases",
+        "operation": "aggregation",
+        "pattern": "status_distribution",
+        "filter_type": "distribution"
+      },
+      "tags": ["aggregation", "cases", "distribution", "status", "statistics"]
+    },
+
+    {
+      "questions": [
+        "Donne-moi les affaires en conception",
+        "Liste des affaires en phase conception",
+        "Affiche-moi les dossiers au statut conception",
+        "Quelles sont les affaires en conception ?",
+        "Montre-moi les affaires phase conception",
+        "Détails des affaires en cours de conception"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseStatus.normalized\": \"conception\"}}, \"_source\": [\"caseId\", \"caseReference\", \"caseTitle\", \"caseClient\", \"caseManager\", \"caseStatus\"], \"size\": 20}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "cases",
+        "operation": "search",
+        "pattern": "status_filter_search",
+        "filter_type": "status",
+        "status_value": "conception",
+        "returns": "case_list"
+      },
+      "tags": ["search", "cases", "status", "conception", "list"]
+    },
+    {
+      "questions": [
+        "Combien de rapports créés cette année ?",
+        "Nombre de rapports créés en 2025",
+        "Rapports générés cette année",
+        "Combien de livrables créés cette année ?",
+        "Total des rapports produits en 2025",
+        "Quantité de documents créés cette année"
+      ],
+      "query": "{\"size\": 0, \"aggs\": {\"reports_this_year\": {\"nested\": {\"path\": \"reports\"}, \"aggs\": {\"filtered\": {\"filter\": {\"range\": {\"reports.reportCreatedAt\": {\"gte\": \"2025-01-01T00:00:00Z\", \"lte\": \"2025-12-31T23:59:59Z\"}}}, \"aggs\": {\"count\": {\"value_count\": {\"field\": \"reports.reportId\"}}}}}}}}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "complex",
+        "entity_type": "reports",
+        "operation": "count",
+        "pattern": "nested_temporal_count",
+        "filter_type": "date_range",
+        "nested": true,
+        "time_period": "year"
+      },
+      "tags": ["counting", "reports", "nested", "temporal", "year", "created"]
+    },
+
+    {
+      "questions": [
+        "Combien de rapports validés ce mois ?",
+        "Nombre de rapports validés en décembre 2024",
+        "Rapports validés ce mois-ci",
+        "Combien de livrables validés ce mois ?",
+        "Total des rapports validés en décembre",
+        "Quantité de documents validés ce mois"
+      ],
+      "query": "{\"size\": 0, \"aggs\": {\"reports_validated_this_month\": {\"nested\": {\"path\": \"reports\"}, \"aggs\": {\"filtered\": {\"filter\": {\"bool\": {\"must\": [{\"exists\": {\"field\": \"reports.reportValidatedAt\"}}, {\"range\": {\"reports.reportValidatedAt\": {\"gte\": \"2024-12-01T00:00:00Z\", \"lte\": \"2024-12-31T23:59:59Z\"}}}]}}, \"aggs\": {\"count\": {\"value_count\": {\"field\": \"reports.reportId\"}}}}}}}}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "complex",
+        "entity_type": "reports",
+        "operation": "count",
+        "pattern": "nested_temporal_count",
+        "filter_type": "date_range_with_exists",
+        "nested": true,
+        "time_period": "month",
+        "requires_field": "reportValidatedAt"
+      },
+      "tags": ["counting", "reports", "nested", "temporal", "month", "validated"]
+    },
+
+    {
+      "questions": [
+        "Rapports créés la semaine dernière",
+        "Liste des rapports générés la semaine passée",
+        "Quels rapports ont été créés la semaine dernière ?",
+        "Documents produits la semaine dernière",
+        "Livrables de la semaine dernière",
+        "Rapports générés entre le 25 novembre et le 1er décembre"
+      ],
+      "query": "{\"query\": {\"nested\": {\"path\": \"reports\", \"query\": {\"range\": {\"reports.reportCreatedAt\": {\"gte\": \"2024-11-25T00:00:00Z\", \"lte\": \"2024-12-01T23:59:59Z\"}}}}}, \"_source\": [\"caseId\", \"caseReference\", \"reports.reportId\", \"reports.reportReference\", \"reports.reportCreatedAt\", \"reports.reportTypeName\"], \"size\": 20}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "complex",
+        "entity_type": "reports",
+        "operation": "search",
+        "pattern": "nested_temporal_search",
+        "filter_type": "date_range",
+        "nested": true,
+        "time_period": "week",
+        "returns": "report_list"
+      },
+      "tags": ["search", "reports", "nested", "temporal", "week", "created", "list"]
+    },
+
+    {
+      "questions": [
+        "Rapports non validés depuis plus de 30 jours",
+        "Anciens rapports en attente de validation",
+        "Rapports créés il y a plus d'un mois sans validation",
+        "Livrables en retard de validation",
+        "Documents non validés depuis longtemps",
+        "Rapports en attente validation longue durée"
+      ],
+      "query": "{\"query\": {\"nested\": {\"path\": \"reports\", \"query\": {\"bool\": {\"must\": [{\"term\": {\"reports.reportIsValidated\": false}}, {\"range\": {\"reports.reportCreatedAt\": {\"lte\": \"2024-11-01T23:59:59Z\"}}}]}}}}, \"_source\": [\"caseId\", \"caseReference\", \"reports.reportId\", \"reports.reportReference\", \"reports.reportCreatedAt\", \"reports.reportIsValidated\"], \"size\": 20}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "complex",
+        "entity_type": "reports",
+        "operation": "search",
+        "pattern": "nested_temporal_status_search",
+        "filter_type": "date_and_status",
+        "nested": true,
+        "business_logic": "overdue_validation"
+      },
+      "tags": ["search", "reports", "nested", "temporal", "overdue", "validation", "status"]
+    },
+
+    {
+      "questions": [
+        "Rapports non validés depuis plus de 30 jours",
+        "Anciens rapports en attente de validation",
+        "Rapports créés il y a plus d'un mois sans validation",
+        "Livrables en retard de validation",
+        "Documents non validés depuis longtemps",
+        "Rapports en attente validation longue durée"
+      ],
+      "query": "{\"query\": {\"nested\": {\"path\": \"reports\", \"query\": {\"bool\": {\"must\": [{\"term\": {\"reports.reportIsValidated\": false}}, {\"range\": {\"reports.reportCreatedAt\": {\"lte\": \"2024-11-01\"}}}]}}}}, \"_source\": [\"caseId\", \"caseReference\", \"reports.reportId\", \"reports.reportReference\", \"reports.reportCreatedAt\", \"reports.reportIsValidated\"], \"size\": 20}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "complex",
+        "entity_type": "reports",
+        "operation": "search",
+        "pattern": "nested_temporal_status_search",
+        "filter_type": "date_and_status",
+        "nested": true,
+        "business_logic": "overdue_validation"
+      },
+      "tags": ["search", "reports", "nested", "temporal", "overdue", "validation", "status"]
+    }
+  ]
+}
