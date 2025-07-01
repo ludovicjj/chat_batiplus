@@ -48,7 +48,11 @@ class ChatbotTestCommand extends Command
         // 1360 -test here (client case)
         //$question = "Combien y a t il d'affaires au total ?";
         //$question = "Combien y a t il de rapports au total ?";
-        $question = "donne moi des information sur les avis dans l'affaire avec id 1360 ?";
+        //$question = "Combien de rapports créés cette année ?";
+        //$question = "Combien de rapports validés ce mois ?";
+        //$question = "Combien d'affaires en réception ?";
+        $question = "Combien d'affaires en travaux ?";
+        //$question = "Répartition des affaires par statut";
 
         $streamingData = $this->prepareElasticsearchData($io, $question);
 

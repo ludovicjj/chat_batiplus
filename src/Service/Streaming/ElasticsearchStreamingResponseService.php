@@ -11,6 +11,7 @@ use App\Service\Elasticsearch\ElasticsearchSecurityService;
 use App\Service\LLM\HumanResponseService;
 use App\Service\LLM\IntentService;
 use App\Service\QueryProcessor;
+use App\Service\Rag\RagService;
 use Exception;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Response;
@@ -33,7 +34,10 @@ readonly class ElasticsearchStreamingResponseService
         private ReportArchiveService            $reportArchiveService,
         private ServerSentEventService          $sseService,
         private LoggerInterface                 $logger,
-        private QueryProcessor                  $queryProcessor
+        private QueryProcessor                  $queryProcessor,
+
+        // Rag
+        private RagService                      $ragService,
     ) {}
 
     public function createStreamingResponse(string $question): StreamedResponse
@@ -102,13 +106,20 @@ readonly class ElasticsearchStreamingResponseService
         // Step 2: Get Elasticsearch schema
         $schema = $this->elasticsearchSchemaService->getMappingsStructure();
 
-        // Step 3: Generate ES query using LLM
-        $queryBody = $this->elasticsearchGeneratorService->generateQueryBody($normalizedQuestion, $schema, $intent);
+        // Step 3: Rag examples
+        $ragExamples = $this->ragService->findSimilarExamples(
+            question: $normalizedQuestion,
+            intent: $intent,
+            similarityThreshold: 0.65
+        );
 
-        // Step 4: Validate ES query for security
+        // Step 4: Generate ES query using LLM
+        $queryBody = $this->elasticsearchGeneratorService->generateQueryBody($normalizedQuestion, $schema, $intent, $ragExamples);
+
+        // Step 5: Validate ES query for security
         $this->elasticsearchSecurityService->validateQuery($queryBody);
 
-        // Step 5: Execute the query
+        // Step 6: Execute the query
         $results = $this->elasticsearchExecutorService->executeQuery($queryBody);
 
         return [

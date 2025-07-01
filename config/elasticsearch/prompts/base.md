@@ -66,3 +66,22 @@ Toujours utiliser cette structure de base :
   "track_total_hits": true
 }
 ```
+
+## ⚠️ FORMAT DE DATES OBLIGATOIRE
+
+**RÈGLE ABSOLUE pour les dates :**
+- Utilisez TOUJOURS le format ISO 8601 complet: `yyyy-MM-ddTHH:mm:ssZ`
+- JAMAIS de dates courtes comme "2024-01-01"
+- TOUJOURS inclure l'heure et timezone
+
+### ✅ Syntaxe CORRECTE pour les dates
+```json
+{
+  "range": {
+    "reports.reportCreatedAt": {
+      "gte": "2025-01-01T00:00:00Z",
+      "lte": "2025-12-31T23:59:59Z"
+    }
+  }
+}
+```

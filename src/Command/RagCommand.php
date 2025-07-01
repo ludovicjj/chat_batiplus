@@ -256,7 +256,8 @@ class RagCommand extends Command
         $tableRows = [];
 
         $testQuestions = [
-            "Combien y a t il de rapport dans l'affaire avec id 1360",
+            "Combien de rapports créés cette année ?",
+            //"Combien y a t il de rapport dans l'affaire avec id 1360",
         ];
 
         try {

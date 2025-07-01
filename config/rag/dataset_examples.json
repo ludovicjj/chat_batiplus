@@ -452,6 +452,273 @@
         "entity_type": "reports"
       },
       "tags": ["search", "reports", "information", "nested", "case_specific", "detailed"]
+    },
+    {
+      "questions": [
+        "Donne-moi des informations sur l'affaire ID 1360",
+        "Peux-tu me donner les détails de l'affaire ID 1360 ?",
+        "Affiche-moi les données de l'affaire numéro 1360",
+        "Que contient l'affaire ID 1360 ?",
+        "Montre-moi les informations complètes de l'affaire 1360",
+        "Détails complets de l'affaire ID 1360"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseId\": 1360}}, \"_source\": [\"caseId\", \"caseReference\", \"caseTitle\", \"caseClient\", \"caseManager\", \"caseStatus\", \"reportsCount\", \"reviewsCount\"], \"size\": 1}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "cases",
+        "operation": "search",
+        "pattern": "case_information_retrieval",
+        "filter_type": "case_id",
+        "returns": "detailed_case_info"
+      },
+      "tags": ["search", "cases", "information", "details", "case_specific"]
+    },
+    {
+      "questions": [
+        "Donne-moi des informations sur l'affaire référence 94P0237518",
+        "Peux-tu me donner les détails de l'affaire référence 94P0237518 ?",
+        "Affiche-moi les données de l'affaire 94P0237518",
+        "Que contient l'affaire référence 94P0237518 ?",
+        "Montre-moi les informations de l'affaire réf 94P0237518",
+        "Détails de l'affaire référence 94P0237518"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseReference\": \"94P0237518\"}}, \"_source\": [\"caseId\", \"caseReference\", \"caseTitle\", \"caseClient\", \"caseManager\", \"caseStatus\", \"reportsCount\", \"reviewsCount\"], \"size\": 10}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "cases",
+        "operation": "search",
+        "pattern": "case_information_retrieval",
+        "filter_type": "case_reference",
+        "returns": "detailed_case_info"
+      },
+      "tags": ["search", "cases", "information", "details", "case_specific", "reference"]
+    },
+    {
+      "questions": [
+        "Combien d'affaires en conception ?",
+        "Nombre d'affaires en phase de conception",
+        "Affaires au statut conception",
+        "Combien de dossiers en conception ?",
+        "Total des affaires en cours de conception",
+        "Quantité d'affaires phase conception"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseStatus.normalized\": \"conception\"}}, \"size\": 0, \"track_total_hits\": true}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "simple",
+        "entity_type": "cases",
+        "operation": "count",
+        "pattern": "status_filter_count",
+        "filter_type": "status",
+        "status_value": "conception"
+      },
+      "tags": ["counting", "cases", "status", "conception"]
+    },
+
+    {
+      "questions": [
+        "Combien d'affaires en travaux ?",
+        "Nombre d'affaires en phase travaux",
+        "Affaires au statut travaux",
+        "Combien de dossiers en travaux ?",
+        "Total des affaires en cours de travaux",
+        "Quantité d'affaires phase travaux"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseStatus.normalized\": \"travaux\"}}, \"size\": 0, \"track_total_hits\": true}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "simple",
+        "entity_type": "cases",
+        "operation": "count",
+        "pattern": "status_filter_count",
+        "filter_type": "status",
+        "status_value": "travaux"
+      },
+      "tags": ["counting", "cases", "status", "travaux"]
+    },
+
+    {
+      "questions": [
+        "Combien d'affaires en réception ?",
+        "Nombre d'affaires en phase réception",
+        "Affaires au statut réception",
+        "Combien de dossiers en réception ?",
+        "Total des affaires en cours de réception",
+        "Quantité d'affaires phase réception"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseStatus.normalized\": \"réception\"}}, \"size\": 0, \"track_total_hits\": true}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "simple",
+        "entity_type": "cases",
+        "operation": "count",
+        "pattern": "status_filter_count",
+        "filter_type": "status",
+        "status_value": "reception"
+      },
+      "tags": ["counting", "cases", "status", "reception"]
+    },
+
+    {
+      "questions": [
+        "Répartition des affaires par statut",
+        "Distribution des affaires par phase",
+        "Affaires par statut",
+        "Statistiques des statuts d'affaires",
+        "Combien d'affaires dans chaque phase ?",
+        "Ventilation par statut des dossiers"
+      ],
+      "query": "{\"aggs\": {\"status_distribution\": {\"terms\": {\"field\": \"caseStatus.normalized\"}}}, \"size\": 0}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "cases",
+        "operation": "aggregation",
+        "pattern": "status_distribution",
+        "filter_type": "distribution"
+      },
+      "tags": ["aggregation", "cases", "distribution", "status", "statistics"]
+    },
+
+    {
+      "questions": [
+        "Donne-moi les affaires en conception",
+        "Liste des affaires en phase conception",
+        "Affiche-moi les dossiers au statut conception",
+        "Quelles sont les affaires en conception ?",
+        "Montre-moi les affaires phase conception",
+        "Détails des affaires en cours de conception"
+      ],
+      "query": "{\"query\": {\"term\": {\"caseStatus.normalized\": \"conception\"}}, \"_source\": [\"caseId\", \"caseReference\", \"caseTitle\", \"caseClient\", \"caseManager\", \"caseStatus\"], \"size\": 20}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "medium",
+        "entity_type": "cases",
+        "operation": "search",
+        "pattern": "status_filter_search",
+        "filter_type": "status",
+        "status_value": "conception",
+        "returns": "case_list"
+      },
+      "tags": ["search", "cases", "status", "conception", "list"]
+    },
+    {
+      "questions": [
+        "Combien de rapports créés cette année ?",
+        "Nombre de rapports créés en 2025",
+        "Rapports générés cette année",
+        "Combien de livrables créés cette année ?",
+        "Total des rapports produits en 2025",
+        "Quantité de documents créés cette année"
+      ],
+      "query": "{\"size\": 0, \"aggs\": {\"reports_this_year\": {\"nested\": {\"path\": \"reports\"}, \"aggs\": {\"filtered\": {\"filter\": {\"range\": {\"reports.reportCreatedAt\": {\"gte\": \"2025-01-01T00:00:00Z\", \"lte\": \"2025-12-31T23:59:59Z\"}}}, \"aggs\": {\"count\": {\"value_count\": {\"field\": \"reports.reportId\"}}}}}}}}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "complex",
+        "entity_type": "reports",
+        "operation": "count",
+        "pattern": "nested_temporal_count",
+        "filter_type": "date_range",
+        "nested": true,
+        "time_period": "year"
+      },
+      "tags": ["counting", "reports", "nested", "temporal", "year", "created"]
+    },
+
+    {
+      "questions": [
+        "Combien de rapports validés ce mois ?",
+        "Nombre de rapports validés en décembre 2024",
+        "Rapports validés ce mois-ci",
+        "Combien de livrables validés ce mois ?",
+        "Total des rapports validés en décembre",
+        "Quantité de documents validés ce mois"
+      ],
+      "query": "{\"size\": 0, \"aggs\": {\"reports_validated_this_month\": {\"nested\": {\"path\": \"reports\"}, \"aggs\": {\"filtered\": {\"filter\": {\"bool\": {\"must\": [{\"exists\": {\"field\": \"reports.reportValidatedAt\"}}, {\"range\": {\"reports.reportValidatedAt\": {\"gte\": \"2024-12-01T00:00:00Z\", \"lte\": \"2024-12-31T23:59:59Z\"}}}]}}, \"aggs\": {\"count\": {\"value_count\": {\"field\": \"reports.reportId\"}}}}}}}}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "complex",
+        "entity_type": "reports",
+        "operation": "count",
+        "pattern": "nested_temporal_count",
+        "filter_type": "date_range_with_exists",
+        "nested": true,
+        "time_period": "month",
+        "requires_field": "reportValidatedAt"
+      },
+      "tags": ["counting", "reports", "nested", "temporal", "month", "validated"]
+    },
+
+    {
+      "questions": [
+        "Rapports créés la semaine dernière",
+        "Liste des rapports générés la semaine passée",
+        "Quels rapports ont été créés la semaine dernière ?",
+        "Documents produits la semaine dernière",
+        "Livrables de la semaine dernière",
+        "Rapports générés entre le 25 novembre et le 1er décembre"
+      ],
+      "query": "{\"query\": {\"nested\": {\"path\": \"reports\", \"query\": {\"range\": {\"reports.reportCreatedAt\": {\"gte\": \"2024-11-25T00:00:00Z\", \"lte\": \"2024-12-01T23:59:59Z\"}}}}}, \"_source\": [\"caseId\", \"caseReference\", \"reports.reportId\", \"reports.reportReference\", \"reports.reportCreatedAt\", \"reports.reportTypeName\"], \"size\": 20}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "complex",
+        "entity_type": "reports",
+        "operation": "search",
+        "pattern": "nested_temporal_search",
+        "filter_type": "date_range",
+        "nested": true,
+        "time_period": "week",
+        "returns": "report_list"
+      },
+      "tags": ["search", "reports", "nested", "temporal", "week", "created", "list"]
+    },
+
+    {
+      "questions": [
+        "Rapports non validés depuis plus de 30 jours",
+        "Anciens rapports en attente de validation",
+        "Rapports créés il y a plus d'un mois sans validation",
+        "Livrables en retard de validation",
+        "Documents non validés depuis longtemps",
+        "Rapports en attente validation longue durée"
+      ],
+      "query": "{\"query\": {\"nested\": {\"path\": \"reports\", \"query\": {\"bool\": {\"must\": [{\"term\": {\"reports.reportIsValidated\": false}}, {\"range\": {\"reports.reportCreatedAt\": {\"lte\": \"2024-11-01T23:59:59Z\"}}}]}}}}, \"_source\": [\"caseId\", \"caseReference\", \"reports.reportId\", \"reports.reportReference\", \"reports.reportCreatedAt\", \"reports.reportIsValidated\"], \"size\": 20}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "complex",
+        "entity_type": "reports",
+        "operation": "search",
+        "pattern": "nested_temporal_status_search",
+        "filter_type": "date_and_status",
+        "nested": true,
+        "business_logic": "overdue_validation"
+      },
+      "tags": ["search", "reports", "nested", "temporal", "overdue", "validation", "status"]
+    },
+
+    {
+      "questions": [
+        "Rapports non validés depuis plus de 30 jours",
+        "Anciens rapports en attente de validation",
+        "Rapports créés il y a plus d'un mois sans validation",
+        "Livrables en retard de validation",
+        "Documents non validés depuis longtemps",
+        "Rapports en attente validation longue durée"
+      ],
+      "query": "{\"query\": {\"nested\": {\"path\": \"reports\", \"query\": {\"bool\": {\"must\": [{\"term\": {\"reports.reportIsValidated\": false}}, {\"range\": {\"reports.reportCreatedAt\": {\"lte\": \"2024-11-01\"}}}]}}}}, \"_source\": [\"caseId\", \"caseReference\", \"reports.reportId\", \"reports.reportReference\", \"reports.reportCreatedAt\", \"reports.reportIsValidated\"], \"size\": 20}",
+      "intent": "INFO",
+      "metadata": {
+        "complexity": "complex",
+        "entity_type": "reports",
+        "operation": "search",
+        "pattern": "nested_temporal_status_search",
+        "filter_type": "date_and_status",
+        "nested": true,
+        "business_logic": "overdue_validation"
+      },
+      "tags": ["search", "reports", "nested", "temporal", "overdue", "validation", "status"]
     }
   ]
 }
