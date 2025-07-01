@@ -39,7 +39,10 @@ readonly class ElasticsearchStreamingResponseService
     public function createStreamingResponse(string $question): StreamedResponse
     {
         return new StreamedResponse(
-            fn() => $this->executeStreamingWorkflow($question),
+            function() use ($question) {
+                $this->sseService->initializeStreaming();
+                $this->executeStreamingWorkflow($question);
+            },
             Response::HTTP_OK,
             $this->sseService->getHeaders()
         );

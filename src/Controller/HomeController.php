@@ -13,9 +13,10 @@ class HomeController extends AbstractController
     #[Route('/', name: 'home')]
     public function index(): Response
     {
-        return $this->render('chat/index.html.twig', [
-            'title' => 'ChatBot BatiPlus'
-        ]);
+        return $this->redirectToRoute('home_stream');
+//        return $this->render('chat/index.html.twig', [
+//            'title' => 'ChatBot BatiPlus'
+//        ]);
     }
 
     #[Route('/stream', name: 'home_stream')]

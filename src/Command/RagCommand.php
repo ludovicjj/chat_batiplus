@@ -98,22 +98,22 @@ class RagCommand extends Command
             }
         }
 
-        $examples = $this->ragLoader->loadAllExamples();
+        $dataset = $this->ragLoader->loadAllExamples();
 
         try {
-            foreach ($examples as $index => $example) {
-                $rag = $this->ragService->addExample(
-                    $example['question'],
-                    $example['query'],
-                    $example['intent'],
-                    $example['metadata'],
-                    $example['tags']
-                );
-
-                $io->text("✅ Exemple " . ($index + 1) . " ajouté (ID: {$rag->getId()})");
+            foreach ($dataset as $data) {
+                foreach ($data['questions'] as $question) {
+                    $this->ragService->addExample(
+                        $question,
+                        $data['query'],
+                        $data['intent'],
+                        $data['metadata'],
+                        $data['tags']
+                    );
+                }
             }
 
-            $io->success('✅ Tous les exemples initiaux ajoutés');
+            $io->success('✅ Example created with success');
             return Command::SUCCESS;
 
         } catch (Exception $e) {
@@ -256,36 +256,14 @@ class RagCommand extends Command
         $tableRows = [];
 
         $testQuestions = [
-            // COMPTAGE - devrait matcher "Combien d'affaires au total ?"
-            "Nombre total de dossiers ?",
-            "Combien de cases au total ?",
-
-            // RECHERCHE PAR ID - devrait matcher "Affaire avec l'ID 869"
-            "Affaire ID 123",
-            "Dossier avec l'identifiant 456",
-
-            // RECHERCHE PAR REFERENCE - devrait matcher les exemples de référence
-            "Affaire référence ABC123",
-            "Dossier 94P0999888",
-
-            // RECHERCHE PAR MANAGER - devrait matcher "Affaires pour le manager William"
-            "Dossiers manager Pierre",
-            "Affaires gérées par Jean DUPONT",
-
-            // RECHERCHE PAR CLIENT - devrait matcher "Affaires pour le client APHP"
-            "Dossiers client Microsoft",
-            "Affaires pour SNCF",
-
-            // QUESTIONS DIFFERENTES - ne devrait rien matcher ou faible score
-            "Créer une nouvelle affaire",
-            "Supprimer le rapport 123"
+            "Combien y a t il de rapport dans l'affaire avec id 1360",
         ];
 
         try {
             foreach ($testQuestions as $question) {
                 $results = $this->ragService->findSimilarExamples(
                     question: $question,
-                    similarityThreshold: 0.65  // Seuil bas pour voir plus de résultats
+                    similarityThreshold: 0.70
                 );
 
                 if (empty($results)) {
@@ -307,7 +285,6 @@ class RagCommand extends Command
                     $scoreDisplay = match(true) {
                         $similarity >= 80 => "<fg=green>{$similarity}%</>",
                         $similarity >= 70 => "<fg=yellow>{$similarity}%</>",
-                        $similarity >= 60 => "<fg=cyan>{$similarity}%</>",
                         default => "<fg=red>{$similarity}%</>"
                     };
 

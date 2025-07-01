@@ -46,7 +46,9 @@ class ChatbotTestCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $io->title('ChatBot BatiPlus - Test des composants');
         // 1360 -test here (client case)
-        $question = "Combien y a t il de rapports au total ?";
+        //$question = "Combien y a t il d'affaires au total ?";
+        //$question = "Combien y a t il de rapports au total ?";
+        $question = "donne moi des information sur les avis dans l'affaire avec id 1360 ?";
 
         $streamingData = $this->prepareElasticsearchData($io, $question);
 
@@ -93,21 +95,21 @@ class ChatbotTestCommand extends Command
 
         // 3. Rag examples
         $ragExamples = [];
-//        $ragExamples = $this->ragService->findSimilarExamples(
-//            question: $normalizedQuestion,
-//            intent: $intent,
-//            similarityThreshold: 0.65
-//        );
-//        if (!empty($ragExamples)) {
-//            foreach ($ragExamples as $index => $example) {
-//                $similarity = number_format(($example->getSimilarityScore() ?? 0) * 100, 1);
-//                $io->text("  📋 Exemple " . ($index + 1) . " (similarité: {$similarity}%)");
-//                $io->text("     Question: \"{$example->getQuestion()}\"");
-//                $io->text("     Query preview: " . substr($example->getQuery(), 0, 80) . '...');
-//            }
-//        } else {
-//            $io->text("Failed to find similarity");
-//        }
+        $ragExamples = $this->ragService->findSimilarExamples(
+            question: $normalizedQuestion,
+            intent: $intent,
+            similarityThreshold: 0.65
+        );
+        if (!empty($ragExamples)) {
+            foreach ($ragExamples as $index => $example) {
+                $similarity = number_format(($example->getSimilarityScore() ?? 0) * 100, 1);
+                $io->text("  📋 Exemple " . ($index + 1) . " (similarité: {$similarity}%)");
+                $io->text("     Question: \"{$example->getQuestion()}\"");
+                $io->text("     Query preview: " . substr($example->getQuery(), 0, 80) . '...');
+            }
+        } else {
+            $io->text("Failed to find similarity");
+        }
 
         // 4. Test de génération LLM
         $queryBody = $this->elasticsearchGeneratorService->generateQueryBody($normalizedQuestion, $schema, $intent, $ragExamples);
