@@ -1,7 +1,8 @@
 # ChatBot
 
 Chatbot intelligent pour interroger les données Elasticsearch avec du langage naturel.
-(PS: Ce projet a ete concu en collaboration avec une IA)
+vous pouvez utiliser la structure du projet et l'adapter a votre propre use case
+Ce projet a ete concu en collaboration avec une IA.
 
 ## Fonctionnalités
 
@@ -25,7 +26,7 @@ Question utilisateur
 7. Réponse humaine (LLM + streaming)
 ```
 
-## 💼 Cas d'usage supportés
+## Cas d'usage supportés
 
 ### Comptage
 - `"Combien d'affaires au total ?"`
@@ -151,7 +152,7 @@ php bin/console rag:enrich --generate
 - Streaming SSE pour UX fluide
 - Gestion des timeouts et mémoire
 
-## 📊 Métriques & Monitoring
+## Métriques & Monitoring
 
 ### Scores RAG
 - **>85%** → Match excellent
