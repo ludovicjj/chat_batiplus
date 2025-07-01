@@ -67,12 +67,12 @@ npm run build
 
 ### Elasticsearch
 ```yaml
-# config/elasticsearch/mapping.yaml
+# config/elasticsearch/mappings/*.yaml
 # Définit la structure des données
 ```
 
 ### RAG Dataset
-```json
+```yaml
 # config/rag/dataset_examples.json
 # Exemples d'apprentissage question/query
 ```
